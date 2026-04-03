@@ -15,6 +15,7 @@
         { key: 'posts', label: { en: 'Post Management', zh: '\u6587\u7ae0\u7ba1\u7406' }, href: '/admin/posts' },
         { key: 'graphics', label: { en: 'Graphic Management', zh: '\u56fe\u6587\u7ba1\u7406' }, href: '/admin/graphics' },
         { key: 'tools', label: { en: 'Tools Management', zh: '\u5de5\u5177\u7ba1\u7406' }, href: '/admin/tools' },
+        { key: 'issues', label: { en: 'Issues Management', zh: '\u95ee\u9898\u7ba1\u7406' }, href: '/admin/issues' },
       ],
     },
     { key: 'navigation', label: { en: 'Navigation', zh: '\u5bfc\u822a\u7ba1\u7406' }, href: '/admin/navigation' },
@@ -939,6 +940,17 @@
     document.getElementById('admin-locale-toggle').addEventListener('click', toggleLocale);
     document.getElementById('admin-theme-toggle').addEventListener('click', toggleTheme);
     document.getElementById('admin-logout').addEventListener('click', logout);
+
+    if (Array.isArray(config.actions)) {
+      config.actions.forEach(function(action) {
+        if (action.onClick && action.id) {
+          const button = document.getElementById(action.id);
+          if (button) {
+            button.addEventListener('click', action.onClick);
+          }
+        }
+      });
+    }
 
     applyPageTitle(title || activeLabel);
     updateDocumentLanguage(locale);

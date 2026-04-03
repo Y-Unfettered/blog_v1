@@ -1,0 +1,9 @@
+- [x] Checkpoint 1: 分析其他页面的滚动位置保存机制
+- [x] Checkpoint 2: 检查生活随笔页面的滚动位置保存逻辑
+- [x] Checkpoint 3: 分析路由跳转和状态管理机制
+- [x] Checkpoint 4: 生活随笔页面添加滚动位置保存逻辑
+- [x] Checkpoint 5: 从详情页返回时保持正确的滚动位置
+- [x] Checkpoint 6: 滚动位置保存机制修复完成
+- [x] Checkpoint 7: 生活随笔页面滚动位置保存正常
+- [x] Checkpoint 8: 修复不影响其他功能
+- [x] Checkpoint 9: 滚动位置保存性能良好

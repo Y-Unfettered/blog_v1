@@ -1,0 +1,5 @@
+- [x] Checkpoint 1: 准确识别按钮点击事件绑定的问题
+- [x] Checkpoint 2: 按钮点击后弹窗正常打开
+- [x] Checkpoint 3: 按钮事件绑定代码正确
+- [x] Checkpoint 4: 新建问题流程完整可用
+- [x] Checkpoint 5: 新问题记录成功保存到数据库

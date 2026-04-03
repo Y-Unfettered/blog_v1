@@ -1,0 +1,8 @@
+- [x] Checkpoint 1: 了解文章数据结构和字段要求
+- [x] Checkpoint 2: 确定生活随笔的分类和标签策略
+- [x] Checkpoint 3: 10篇文章成功保存到数据库
+- [x] Checkpoint 4: 文章内容符合生活随笔风格和质量要求
+- [x] Checkpoint 5: 前端页面显示所有10篇生活随笔文章
+- [x] Checkpoint 6: 页面显示的文章信息正确完整
+- [x] Checkpoint 7: 所有文章包含必要的字段
+- [x] Checkpoint 8: 数据格式符合现有规范

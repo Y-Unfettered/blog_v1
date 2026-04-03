@@ -1,0 +1,14 @@
+- [x] Checkpoint 1: 后台导航菜单中显示"问题管理"选项
+- [x] Checkpoint 2: 点击问题管理能正确跳转到对应页面
+- [x] Checkpoint 3: 问题管理页面显示问题列表和操作按钮
+- [x] Checkpoint 4: UI设计符合后台整体风格
+- [x] Checkpoint 5: 页面能正常加载和渲染
+- [x] Checkpoint 6: 新增问题记录成功保存
+- [x] Checkpoint 7: 编辑问题记录成功更新
+- [x] Checkpoint 8: 删除问题记录成功移除
+- [x] Checkpoint 9: 操作反馈清晰明确
+- [x] Checkpoint 10: issues.json包含5条问题记录
+- [x] Checkpoint 11: 数据字段完整且格式正确
+- [x] Checkpoint 12: 前端问题记录页面显示5条数据
+- [x] Checkpoint 13: 数据内容与之前假数据一致
+- [x] Checkpoint 14: API请求返回200状态码

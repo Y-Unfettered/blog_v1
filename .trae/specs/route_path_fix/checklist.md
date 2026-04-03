@@ -1,0 +1,8 @@
+- [x] Checkpoint 1: 分析路由处理逻辑，定位问题根源
+- [x] Checkpoint 2: 检查导航链接的href属性设置
+- [x] Checkpoint 3: 生活随笔页面地址显示为http://localhost:5174/#/life
+- [x] Checkpoint 4: 首页地址显示为http://localhost:5174/#/
+- [x] Checkpoint 5: 其他页面地址显示正确的哈希路由格式
+- [x] Checkpoint 6: 所有页面路由地址格式正确
+- [x] Checkpoint 7: 导航功能正常工作
+- [x] Checkpoint 8: 修复不影响其他功能

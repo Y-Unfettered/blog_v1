@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>问题记录管理</title>
+  <title>Issues Management - DevLog Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -23,6 +23,139 @@
     };
   </script>
   <link rel="stylesheet" href="/admin/admin-common.css">
+  <style>
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+    .modal-overlay[open] {
+      display: flex;
+    }
+    .modal-overlay::backdrop {
+      background: rgba(0, 0, 0, 0.75);
+    }
+    .modal-content {
+      background: white;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      max-width: 48rem;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .dark .modal-content {
+      background: #1a1a1a;
+    }
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: #111;
+    }
+    .dark .modal-title {
+      color: #fff;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #9ca3af;
+      margin-bottom: 0.5rem;
+    }
+    .input-control {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      background: #ffffff;
+      color: #111827;
+      font-size: 0.875rem;
+    }
+    .dark .input-control {
+      border-color: #374151;
+      background: #1f2937;
+      color: #fff;
+    }
+    .input-control:focus {
+      outline: none;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    }
+    .btn-primary {
+      background: #6366f1;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover {
+      background: #4f46e5;
+    }
+    .btn-secondary {
+      background: #374151;
+      color: #9ca3af;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      border: 1px solid #4b5563;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      margin-top: 1.5rem;
+    }
+    .status-badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .priority-badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .status-resolved {
+      background: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+    }
+    .status-observing {
+      background: rgba(245, 158, 11, 0.1);
+      color: #f59e0b;
+    }
+    .status-pending {
+      background: rgba(107, 114, 128, 0.1);
+      color: #6b7280;
+    }
+    .priority-high {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+    }
+    .priority-medium {
+      background: rgba(245, 158, 11, 0.1);
+      color: #f59e0b;
+    }
+    .priority-low {
+      background: rgba(59, 130, 246, 0.1);
+      color: #3b82f6;
+    }
+  </style>
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-[#0a0a0a] dark:text-gray-100">
   <div id="admin-app"></div>
@@ -33,493 +166,391 @@
       throw new Error('Missing admin auth context.');
     }
 
+    const locale = AdminApp.getLocale();
+    const t = AdminApp.translate;
+
+    const TEXT = {
+      activeLabel: { en: 'Issues Management', zh: '问题管理' },
+      title: { en: 'Issues Management', zh: '问题管理' },
+      description: {
+        en: 'Manage issue records, including their status, priority, categories, and detailed information.',
+        zh: '管理问题记录，包括状态、优先级、分类和详细信息。',
+      },
+      newIssue: { en: 'New Issue', zh: '新建问题' },
+      id: { en: 'ID', zh: 'ID' },
+      title: { en: 'Title', zh: '标题' },
+      status: { en: 'Status', zh: '状态' },
+      priority: { en: 'Priority', zh: '优先级' },
+      category: { en: 'Category', zh: '分类' },
+      phenomenon: { en: 'Phenomenon', zh: '问题现象' },
+      solution: { en: 'Solution', zh: '修复步骤' },
+      conclusion: { en: 'Conclusion', zh: '结论' },
+      tags: { en: 'Tags', zh: '标签' },
+      createdAt: { en: 'Created', zh: '创建时间' },
+      updatedAt: { en: 'Updated', zh: '更新时间' },
+      actions: { en: 'Actions', zh: '操作' },
+      edit: { en: 'Edit', zh: '编辑' },
+      delete: { en: 'Delete', zh: '删除' },
+      save: { en: 'Save', zh: '保存' },
+      cancel: { en: 'Cancel', zh: '取消' },
+      confirmDelete: { en: 'Are you sure you want to delete this issue?', zh: '确定要删除此问题吗？' },
+      searchPlaceholder: { en: 'Search issues...', zh: '搜索问题...' },
+      filterByStatus: { en: 'All Status', zh: '全部状态' },
+      filterByPriority: { en: 'All Priority', zh: '全部优先级' },
+      filterByCategory: { en: 'All Categories', zh: '全部分类' },
+      noIssues: { en: 'No issues found. Click "New Issue" to add one.', zh: '暂无问题，点击"新建问题"添加。' },
+      loading: { en: 'Loading issues...', zh: '正在加载问题...' },
+      saveSuccess: { en: 'Saved successfully', zh: '保存成功' },
+      saveFailed: { en: 'Save failed', zh: '保存失败' },
+      deleteSuccess: { en: 'Deleted successfully', zh: '删除成功' },
+      deleteFailed: { en: 'Delete failed', zh: '删除失败' },
+      statuses: {
+        resolved: { en: 'Resolved', zh: '已解决' },
+        observing: { en: 'Observing', zh: '持续观察' },
+        pending: { en: 'Pending', zh: '待处理' },
+      },
+      priorities: {
+        high: { en: 'High', zh: '高优先级' },
+        medium: { en: 'Medium', zh: '常规问题' },
+        low: { en: 'Low', zh: '低优先级' },
+      },
+    };
+
+    const API_ISSUES = '/api/data/issues';
+
     const layout = AdminApp.mountPage({
       active: 'issues',
-      title: '问题记录管理',
-      description: '管理开发过程中遇到的问题、故障和修复记录。',
+      activeLabel: TEXT.activeLabel,
+      title: TEXT.title,
+      description: TEXT.description,
       actions: [
         {
-          id: 'reload-issues-btn',
-          label: '重新加载',
-          className: 'rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800',
-        },
-        {
-          id: 'create-issue-btn',
-          label: '新建问题',
+          id: 'new-issue-btn',
+          label: TEXT.newIssue,
+          onClick: () => openIssueModal(),
           className: 'rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-colors hover:bg-indigo-700',
         },
       ],
     });
 
-    layout.content.innerHTML = `
-      <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <article class="admin-panel metric-card p-5">
-          <div class="text-sm text-gray-500 dark:text-gray-400">总问题数</div>
-          <div id="metric-total-issues" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
-          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">系统中存储的所有问题记录。</div>
-        </article>
-        <article class="admin-panel metric-card p-5">
-          <div class="text-sm text-gray-500 dark:text-gray-400">已解决</div>
-          <div id="metric-resolved-issues" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
-          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">状态为已解决的问题数量。</div>
-        </article>
-        <article class="admin-panel metric-card p-5">
-          <div class="text-sm text-gray-500 dark:text-gray-400">持续观察</div>
-          <div id="metric-observing-issues" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
-          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">状态为持续观察的问题数量。</div>
-        </article>
-        <article class="admin-panel metric-card p-5">
-          <div class="text-sm text-gray-500 dark:text-gray-400">待解决</div>
-          <div id="metric-pending-issues" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
-          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">状态为待解决的问题数量。</div>
-        </article>
-      </section>
+    let allIssues = [];
+    let filteredIssues = [];
+    let currentFilter = { search: '', status: '', priority: '', category: '' };
 
-      <section class="admin-panel mt-6 p-6">
-        <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_220px_220px]">
-          <div>
-            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-search-input">搜索</label>
-            <input id="issue-search-input" class="input-control" type="search" placeholder="搜索问题标题、描述或标签">
-          </div>
-          <div>
-            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-status-filter">状态</label>
-            <select id="issue-status-filter" class="select-control">
-              <option value="all">全部状态</option>
-              <option value="resolved">已解决</option>
-              <option value="observing">持续观察</option>
-              <option value="pending">待解决</option>
+    const STATUSES = ['resolved', 'observing', 'pending'];
+    const PRIORITIES = ['high', 'medium', 'low'];
+
+    layout.content.innerHTML = `
+      <div class="admin-panel">
+        <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div class="flex flex-1 flex-wrap items-center gap-3">
+            <input
+              id="search-input"
+              type="text"
+              placeholder="${t(TEXT.searchPlaceholder)}"
+              class="input-control flex-1"
+            />
+            <select id="status-filter" class="input-control w-32">
+              <option value="">${t(TEXT.filterByStatus)}</option>
+              ${STATUSES.map(status => `<option value="${status}">${t(TEXT.statuses[status]?.zh || status)}</option>`).join('')}
             </select>
-          </div>
-          <div>
-            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-priority-filter">优先级</label>
-            <select id="issue-priority-filter" class="select-control">
-              <option value="all">全部优先级</option>
-              <option value="high">高</option>
-              <option value="medium">中</option>
-              <option value="low">低</option>
+            <select id="priority-filter" class="input-control w-32">
+              <option value="">${t(TEXT.filterByPriority)}</option>
+              ${PRIORITIES.map(priority => `<option value="${priority}">${t(TEXT.priorities[priority]?.zh || priority)}</option>`).join('')}
+            </select>
+            <select id="category-filter" class="input-control w-40">
+              <option value="">${t(TEXT.filterByCategory)}</option>
             </select>
           </div>
         </div>
-        <div id="issue-list" class="mt-6 space-y-4"></div>
-      </section>
 
-      <div id="issue-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm">
-        <div class="admin-panel w-full max-w-3xl p-6">
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <div class="admin-kicker text-gray-500 dark:text-gray-400">问题编辑器</div>
-              <h2 id="issue-modal-title" class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">创建问题</h2>
-            </div>
-            <button id="issue-modal-close" type="button" class="rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">关闭</button>
-          </div>
-          <form id="issue-form" class="mt-6 space-y-4" novalidate>
-            <div>
-              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-title-input">标题</label>
-              <input id="issue-title-input" class="input-control" type="text" maxlength="200" required>
-            </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full">
+            <thead>
+              <tr class="border-b border-gray-200 dark:border-gray-700">
+                <th class="px-4 py-3 text-left text-sm font-semibold">${t(TEXT.title)}</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold">${t(TEXT.status)}</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold">${t(TEXT.priority)}</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold">${t(TEXT.category)}</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold hidden lg:table-cell">${t(TEXT.createdAt)}</th>
+                <th class="px-4 py-3 text-left text-sm font-semibold">${t(TEXT.actions)}</th>
+              </tr>
+            </thead>
+            <tbody id="issues-table-body"></tbody>
+          </table>
+        </div>
+
+        <div id="empty-state" class="hidden py-12 text-center text-gray-500">
+          ${t(TEXT.noIssues)}
+        </div>
+      </div>
+
+      <dialog id="issue-modal" class="modal-overlay" hidden>
+        <div class="modal-content max-w-4xl">
+          <h3 id="modal-title" class="modal-title">${t(TEXT.newIssue)}</h3>
+          <form id="issue-form" class="space-y-4">
+            <input type="hidden" name="id" id="issue-id" />
             <div class="grid gap-4 md:grid-cols-2">
+              <div class="md:col-span-2">
+                <label class="form-label">${t(TEXT.title)}</label>
+                <input name="title" id="issue-title" type="text" class="input-control" required maxlength="200" />
+              </div>
               <div>
-                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-status-input">状态</label>
-                <select id="issue-status-input" class="select-control">
-                  <option value="pending">待解决</option>
-                  <option value="observing">持续观察</option>
-                  <option value="resolved">已解决</option>
+                <label class="form-label">${t(TEXT.status)}</label>
+                <select name="status" id="issue-status" class="input-control" required>
+                  ${STATUSES.map(status => `<option value="${status}">${t(TEXT.statuses[status]?.zh || status)}</option>`).join('')}
                 </select>
               </div>
               <div>
-                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-priority-input">优先级</label>
-                <select id="issue-priority-input" class="select-control">
-                  <option value="medium">中</option>
-                  <option value="high">高</option>
-                  <option value="low">低</option>
+                <label class="form-label">${t(TEXT.priority)}</label>
+                <select name="priority" id="issue-priority" class="input-control" required>
+                  ${PRIORITIES.map(priority => `<option value="${priority}">${t(TEXT.priorities[priority]?.zh || priority)}</option>`).join('')}
                 </select>
+              </div>
+              <div>
+                <label class="form-label">${t(TEXT.category)}</label>
+                <input name="category" id="issue-category" type="text" class="input-control" maxlength="50" />
+              </div>
+              <div>
+                <label class="form-label">${t(TEXT.tags)}</label>
+                <input name="tags" id="issue-tags" type="text" class="input-control" placeholder="标签1,标签2,标签3" maxlength="200" />
               </div>
             </div>
             <div>
-              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-category-input">分类</label>
-              <input id="issue-category-input" class="input-control" type="text" maxlength="100" placeholder="环境配置、性能优化、业务逻辑等">
+              <label class="form-label">${t(TEXT.phenomenon)}</label>
+              <textarea name="phenomenon" id="issue-phenomenon" class="input-control" rows="3" maxlength="1000" required></textarea>
             </div>
             <div>
-              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-phenomenon-input">问题现象</label>
-              <textarea id="issue-phenomenon-input" class="textarea-control" rows="4" maxlength="800" placeholder="详细描述问题的具体表现和复现步骤"></textarea>
+              <label class="form-label">${t(TEXT.solution)}</label>
+              <textarea name="solution" id="issue-solution" class="input-control" rows="4" maxlength="2000"></textarea>
             </div>
             <div>
-              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-solution-input">修复步骤</label>
-              <textarea id="issue-solution-input" class="textarea-control" rows="6" maxlength="1500" placeholder="详细描述修复过程和解决方案"></textarea>
+              <label class="form-label">${t(TEXT.conclusion)}</label>
+              <textarea name="conclusion" id="issue-conclusion" class="input-control" rows="2" maxlength="1000"></textarea>
             </div>
-            <div>
-              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-conclusion-input">结论</label>
-              <textarea id="issue-conclusion-input" class="textarea-control" rows="3" maxlength="500" placeholder="总结经验教训和预防措施"></textarea>
-            </div>
-            <div>
-              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-tags-input">标签</label>
-              <input id="issue-tags-input" class="input-control" type="text" maxlength="200" placeholder="用逗号分隔多个标签">
-            </div>
-            <div class="flex justify-end gap-3 pt-2">
-              <button id="issue-delete-btn" type="button" class="hidden rounded-xl border border-rose-200 px-4 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-50 dark:border-rose-900/50 dark:text-rose-300 dark:hover:bg-rose-500/10">删除</button>
-              <button type="submit" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-colors hover:bg-indigo-700">保存问题</button>
+            <div class="modal-actions">
+              <button type="button" class="btn-secondary" onclick="closeIssueModal()">${t(TEXT.cancel)}</button>
+              <button type="submit" class="btn-primary">${t(TEXT.save)}</button>
             </div>
           </form>
         </div>
-      </div>
+      </dialog>
     `;
 
-    const state = {
-      issues: [],
-      editingId: '',
-      search: '',
-      statusFilter: 'all',
-      priorityFilter: 'all',
-    };
+    const modal = document.getElementById('issue-modal');
+    const form = document.getElementById('issue-form');
+    const searchInput = document.getElementById('search-input');
+    const statusFilter = document.getElementById('status-filter');
+    const priorityFilter = document.getElementById('priority-filter');
+    const categoryFilter = document.getElementById('category-filter');
 
-    const elements = {
-      searchInput: document.getElementById('issue-search-input'),
-      statusFilter: document.getElementById('issue-status-filter'),
-      priorityFilter: document.getElementById('issue-priority-filter'),
-      list: document.getElementById('issue-list'),
-      modal: document.getElementById('issue-modal'),
-      modalTitle: document.getElementById('issue-modal-title'),
-      closeModalButton: document.getElementById('issue-modal-close'),
-      form: document.getElementById('issue-form'),
-      titleInput: document.getElementById('issue-title-input'),
-      statusInput: document.getElementById('issue-status-input'),
-      priorityInput: document.getElementById('issue-priority-input'),
-      categoryInput: document.getElementById('issue-category-input'),
-      phenomenonInput: document.getElementById('issue-phenomenon-input'),
-      solutionInput: document.getElementById('issue-solution-input'),
-      conclusionInput: document.getElementById('issue-conclusion-input'),
-      tagsInput: document.getElementById('issue-tags-input'),
-      deleteButton: document.getElementById('issue-delete-btn'),
-    };
-
-    function getStatusLabel(status) {
-      const labels = {
-        resolved: '已解决',
-        observing: '持续观察',
-        pending: '待解决',
-      };
-      return labels[status] || '未知';
+    function openIssueModal(issue = null) {
+      document.getElementById('modal-title').textContent = issue ? `${t(TEXT.edit)} - ${issue.title}` : t(TEXT.newIssue);
+      document.getElementById('issue-id').value = issue?.id || '';
+      document.getElementById('issue-title').value = issue?.title || '';
+      document.getElementById('issue-status').value = issue?.status || STATUSES[0];
+      document.getElementById('issue-priority').value = issue?.priority || PRIORITIES[1];
+      document.getElementById('issue-category').value = issue?.category || '';
+      document.getElementById('issue-tags').value = issue?.tags || '';
+      document.getElementById('issue-phenomenon').value = issue?.phenomenon || '';
+      document.getElementById('issue-solution').value = issue?.solution || '';
+      document.getElementById('issue-conclusion').value = issue?.conclusion || '';
+      modal.showModal();
     }
 
-    function getPriorityLabel(priority) {
-      const labels = {
-        high: '高优先级',
-        medium: '常规问题',
-        low: '低优先级',
-      };
-      return labels[priority] || '未知';
+    function closeIssueModal() {
+      modal.close();
     }
 
-    function getPriorityClass(priority) {
-      const classes = {
-        high: 'bg-red-500/10 text-red-500',
-        medium: 'bg-gray-800 text-gray-500',
-        low: 'bg-blue-500/10 text-blue-500',
-      };
-      return classes[priority] || 'bg-gray-800 text-gray-500';
+    async function loadIssues() {
+      layout.content.querySelector('#issues-table-body').innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center">${t(TEXT.loading)}</td></tr>`;
+      try {
+        const token = AdminApp.getToken();
+        const res = await fetch(API_ISSUES, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!res.ok) throw new Error('Failed to load');
+        allIssues = await res.json();
+        updateCategoryFilter();
+        applyFilters();
+      } catch (err) {
+        console.error('Load issues error:', err);
+        layout.content.querySelector('#issues-table-body').innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-red-500">加载失败：${err.message}</td></tr>`;
+      }
     }
 
-    function syncMetrics() {
-      const totalIssues = state.issues.length;
-      const resolvedIssues = state.issues.filter(issue => issue.status === 'resolved').length;
-      const observingIssues = state.issues.filter(issue => issue.status === 'observing').length;
-      const pendingIssues = state.issues.filter(issue => issue.status === 'pending').length;
-
-      document.getElementById('metric-total-issues').textContent = String(totalIssues);
-      document.getElementById('metric-resolved-issues').textContent = String(resolvedIssues);
-      document.getElementById('metric-observing-issues').textContent = String(observingIssues);
-      document.getElementById('metric-pending-issues').textContent = String(pendingIssues);
+    function updateCategoryFilter() {
+      const categories = [...new Set(allIssues.map(issue => issue.category).filter(Boolean))];
+      categoryFilter.innerHTML = `
+        <option value="">${t(TEXT.filterByCategory)}</option>
+        ${categories.map(category => `<option value="${category}">${category}</option>`).join('')}
+      `;
     }
 
-    function getFilteredIssues() {
-      const search = state.search.trim().toLowerCase();
-
-      return state.issues
-        .filter(issue => {
-          if (state.statusFilter !== 'all' && issue.status !== state.statusFilter) {
-            return false;
-          }
-          if (state.priorityFilter !== 'all' && issue.priority !== state.priorityFilter) {
-            return false;
-          }
-
-          if (!search) {
-            return true;
-          }
-
-          const haystack = [
-            issue.title,
-            issue.phenomenon,
-            issue.solution,
-            issue.conclusion,
-            issue.category,
-            issue.tags,
-          ].join(' ').toLowerCase();
-
-          return haystack.includes(search);
-        })
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    function applyFilters() {
+      filteredIssues = allIssues.filter(issue => {
+        const matchSearch = !currentFilter.search ||
+          issue.title.toLowerCase().includes(currentFilter.search.toLowerCase()) ||
+          issue.phenomenon.toLowerCase().includes(currentFilter.search.toLowerCase()) ||
+          issue.solution?.toLowerCase().includes(currentFilter.search.toLowerCase()) ||
+          issue.conclusion?.toLowerCase().includes(currentFilter.search.toLowerCase());
+        const matchStatus = !currentFilter.status || issue.status === currentFilter.status;
+        const matchPriority = !currentFilter.priority || issue.priority === currentFilter.priority;
+        const matchCategory = !currentFilter.category || issue.category === currentFilter.category;
+        return matchSearch && matchStatus && matchPriority && matchCategory;
+      });
+      renderTable();
     }
 
-    function renderList() {
-      const issues = getFilteredIssues();
+    function renderTable() {
+      const tbody = layout.content.querySelector('#issues-table-body');
+      const empty = layout.content.querySelector('#empty-state');
 
-      if (!issues.length) {
-        elements.list.innerHTML = `
-          <div class="rounded-2xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-            没有符合当前筛选条件的问题记录。
-          </div>
-        `;
+      if (filteredIssues.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
         return;
       }
+      empty.classList.add('hidden');
 
-      elements.list.innerHTML = issues.map(issue => {
-        const statusLabel = getStatusLabel(issue.status);
-        const priorityLabel = getPriorityLabel(issue.priority);
-        const priorityClass = getPriorityClass(issue.priority);
-        const date = new Date(issue.createdAt).toLocaleDateString('zh-CN');
-
-        return `
-          <article class="admin-panel overflow-hidden">
-            <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800">
-              <div class="flex items-start justify-between gap-4">
-                <div class="min-w-0">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <span class="rounded px-2 py-0.5 text-[10px] font-bold ${priorityClass}">${priorityLabel}</span>
-                    <span class="text-xs text-gray-500">${date}</span>
-                  </div>
-                  <h2 class="mt-2 text-lg font-semibold text-gray-900 dark:text-white">${AdminApp.escapeHtml(issue.title)}</h2>
-                </div>
-                <div class="flex shrink-0 items-center gap-2">
-                  <button data-action="edit" data-id="${AdminApp.escapeHtml(issue.id)}" type="button" class="rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">编辑</button>
-                  <button data-action="delete" data-id="${AdminApp.escapeHtml(issue.id)}" type="button" class="rounded-xl border border-rose-200 px-3 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-50 dark:border-rose-900/50 dark:text-rose-300 dark:hover:bg-rose-500/10">删除</button>
-                </div>
-              </div>
+      tbody.innerHTML = filteredIssues.map(issue => `
+        <tr class="group border-b border-gray-100 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50">
+          <td class="px-4 py-3">
+            <div class="font-medium">${escapeHtml(issue.title)}</div>
+            <div class="text-xs text-gray-500">${escapeHtml(issue.phenomenon?.slice(0, 80) || '')}...</div>
+          </td>
+          <td class="px-4 py-3">
+            <span class="status-badge status-${issue.status}">${t(TEXT.statuses[issue.status]?.zh || issue.status)}</span>
+          </td>
+          <td class="px-4 py-3">
+            <span class="priority-badge priority-${issue.priority}">${t(TEXT.priorities[issue.priority]?.zh || issue.priority)}</span>
+          </td>
+          <td class="px-4 py-3 text-sm">${issue.category || '-'}</td>
+          <td class="px-4 py-3 text-sm text-gray-500 hidden lg:table-cell">${formatDate(issue.createdAt)}</td>
+          <td class="px-4 py-3">
+            <div class="flex gap-2">
+              <button class="text-indigo-500 hover:text-indigo-600" onclick="editIssue('${issue.id}')">${t(TEXT.edit)}</button>
+              <button class="text-red-500 hover:text-red-600" onclick="deleteIssue('${issue.id}')">${t(TEXT.delete)}</button>
             </div>
-            <div class="grid gap-4 px-5 py-4 md:grid-cols-[minmax(0,1fr)_220px]">
-              <div>
-                <div class="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
-                  <span>分类: ${AdminApp.escapeHtml(issue.category || '未分类')}</span>
-                  <span>状态: ${statusLabel}</span>
-                </div>
-                <p class="text-sm leading-6 text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">${AdminApp.escapeHtml(issue.phenomenon || '')}</p>
-                ${issue.tags ? `<div class="flex flex-wrap gap-2"><span class="text-xs text-gray-500 dark:text-gray-400">标签:</span>${issue.tags.split(',').map(tag => `<span class="rounded-full bg-gray-800 px-2 py-0.5 text-[10px]">${AdminApp.escapeHtml(tag.trim())}</span>`).join('')}</div>` : ''}
-              </div>
-              <div>
-                <div class="rounded-2xl border border-dashed border-gray-200 p-4 dark:border-gray-700">
-                  <div class="text-xs uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">修复状态</div>
-                  <div class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">${statusLabel}</div>
-                </div>
-              </div>
-            </div>
-          </article>
-        `;
-      }).join('');
+          </td>
+        </tr>
+      `).join('');
     }
 
-    function openModal(issue) {
-      const isEditing = !!issue;
-      state.editingId = isEditing ? String(issue.id) : '';
-
-      elements.modalTitle.textContent = isEditing ? '编辑问题' : '创建问题';
-      elements.titleInput.value = isEditing ? (issue.title || '') : '';
-      elements.statusInput.value = isEditing ? (issue.status || 'pending') : 'pending';
-      elements.priorityInput.value = isEditing ? (issue.priority || 'medium') : 'medium';
-      elements.categoryInput.value = isEditing ? (issue.category || '') : '';
-      elements.phenomenonInput.value = isEditing ? (issue.phenomenon || '') : '';
-      elements.solutionInput.value = isEditing ? (issue.solution || '') : '';
-      elements.conclusionInput.value = isEditing ? (issue.conclusion || '') : '';
-      elements.tagsInput.value = isEditing ? (issue.tags || '') : '';
-      elements.deleteButton.classList.toggle('hidden', !isEditing);
-
-      elements.modal.classList.remove('hidden');
-      elements.modal.classList.add('flex');
-      elements.titleInput.focus();
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    function closeModal() {
-      state.editingId = '';
-      elements.modal.classList.add('hidden');
-      elements.modal.classList.remove('flex');
-      elements.form.reset();
+    function formatDate(dateString) {
+      if (!dateString) return '-';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('zh-CN');
     }
 
-    function getIssueById(issueId) {
-      return state.issues.find(issue => String(issue.id) === String(issueId)) || null;
-    }
-
-    async function saveIssue() {
-      const title = String(elements.titleInput.value || '').trim();
-      const status = elements.statusInput.value;
-      const priority = elements.priorityInput.value;
-      const category = String(elements.categoryInput.value || '').trim();
-      const phenomenon = String(elements.phenomenonInput.value || '').trim();
-      const solution = String(elements.solutionInput.value || '').trim();
-      const conclusion = String(elements.conclusionInput.value || '').trim();
-      const tags = String(elements.tagsInput.value || '').trim();
-
-      if (!title) {
-        layout.setNotice('问题标题不能为空。', 'error');
-        elements.titleInput.focus();
-        return;
-      }
-
-      if (!phenomenon) {
-        layout.setNotice('问题现象不能为空。', 'error');
-        elements.phenomenonInput.focus();
-        return;
-      }
-
-      const payload = {
-        title: title,
-        status: status,
-        priority: priority,
-        category: category,
-        phenomenon: phenomenon,
-        solution: solution,
-        conclusion: conclusion,
-        tags: tags,
-        createdAt: new Date().toISOString(),
+    async function saveIssue(formData) {
+      const issue = {
+        id: formData.get('id') || String(Date.now()),
+        title: formData.get('title'),
+        status: formData.get('status'),
+        priority: formData.get('priority'),
+        category: formData.get('category') || '',
+        phenomenon: formData.get('phenomenon'),
+        solution: formData.get('solution') || '',
+        conclusion: formData.get('conclusion') || '',
+        tags: formData.get('tags') || '',
+        createdAt: formData.get('id') ? allIssues.find(i => i.id === formData.get('id'))?.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
-      const isEditing = !!state.editingId;
-
-      try {
-        layout.setNotice(isEditing ? '保存问题修改中...' : '创建问题中...', 'info');
-        if (isEditing) {
-          await AdminApp.requestJson('/api/data/issues/' + encodeURIComponent(state.editingId), {
-            method: 'PATCH',
-            body: payload,
-          });
-        } else {
-          await AdminApp.requestJson('/api/data/issues', {
-            method: 'POST',
-            body: payload,
-          });
-        }
-
-        closeModal();
-        await loadData(false);
-        layout.setNotice(isEditing ? '问题已更新。' : '问题已创建。', 'success');
-      } catch (error) {
-        layout.setNotice(error.message || '保存问题失败。', 'error');
-      }
-    }
-
-    async function deleteIssue(issueId) {
-      const issue = getIssueById(issueId);
-      if (!issue) {
-        return;
-      }
-
-      if (!window.confirm('删除 "' + (issue.title || issue.id) + '" 吗？')) {
-        return;
+      const index = allIssues.findIndex(i => i.id === issue.id);
+      if (index >= 0) {
+        allIssues[index] = issue;
+      } else {
+        allIssues.push(issue);
       }
 
       try {
-        layout.setNotice('删除问题中...', 'info');
-        await AdminApp.requestJson('/api/data/issues/' + encodeURIComponent(issueId), {
-          method: 'DELETE',
+        const token = AdminApp.getToken();
+        const res = await fetch(API_ISSUES, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(allIssues),
         });
-        if (state.editingId === String(issueId)) {
-          closeModal();
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.message || 'Save failed');
         }
-        await loadData(false);
-        layout.setNotice('问题已删除。', 'success');
-      } catch (error) {
-        layout.setNotice(error.message || '删除问题失败。', 'error');
+        alert(t(TEXT.saveSuccess));
+        closeIssueModal();
+        loadIssues();
+      } catch (err) {
+        console.error('Save error:', err);
+        alert(t(TEXT.saveFailed) + ': ' + err.message);
       }
     }
 
-    async function loadData(showMessage) {
+    async function deleteIssue(id) {
+      if (!confirm(t(TEXT.confirmDelete))) return;
       try {
-        if (showMessage !== false) {
-          layout.setNotice('加载问题数据中...', 'info');
-        }
-
-        const issues = await AdminApp.requestJson('/api/data/issues');
-        state.issues = Array.isArray(issues) ? issues : [];
-
-        syncMetrics();
-        renderList();
-
-        if (showMessage !== false) {
-          layout.setNotice('问题数据加载完成。', 'success');
-        }
-      } catch (error) {
-        layout.setNotice(error.message || '加载问题数据失败。', 'error');
+        allIssues = allIssues.filter(i => i.id !== id);
+        const token = AdminApp.getToken();
+        const res = await fetch(API_ISSUES, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(allIssues),
+        });
+        if (!res.ok) throw new Error('Delete failed');
+        alert(t(TEXT.deleteSuccess));
+        loadIssues();
+      } catch (err) {
+        alert(t(TEXT.deleteFailed) + ': ' + err.message);
       }
     }
 
-    document.getElementById('reload-issues-btn').addEventListener('click', function onReload() {
-      loadData(true);
+    window.editIssue = (id) => {
+      const issue = allIssues.find(i => i.id === id);
+      if (issue) openIssueModal(issue);
+    };
+
+    window.deleteIssue = deleteIssue;
+
+    searchInput.addEventListener('input', (e) => {
+      currentFilter.search = e.target.value;
+      applyFilters();
     });
 
-    document.getElementById('create-issue-btn').addEventListener('click', function onCreate() {
-      openModal(null);
+    statusFilter.addEventListener('change', (e) => {
+      currentFilter.status = e.target.value;
+      applyFilters();
     });
 
-    elements.searchInput.addEventListener('input', function onSearch() {
-      state.search = elements.searchInput.value || '';
-      renderList();
+    priorityFilter.addEventListener('change', (e) => {
+      currentFilter.priority = e.target.value;
+      applyFilters();
     });
 
-    elements.statusFilter.addEventListener('change', function onStatusFilter() {
-      state.statusFilter = elements.statusFilter.value || 'all';
-      renderList();
+    categoryFilter.addEventListener('change', (e) => {
+      currentFilter.category = e.target.value;
+      applyFilters();
     });
 
-    elements.priorityFilter.addEventListener('change', function onPriorityFilter() {
-      state.priorityFilter = elements.priorityFilter.value || 'all';
-      renderList();
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      saveIssue(formData);
     });
 
-    elements.closeModalButton.addEventListener('click', closeModal);
-
-    elements.modal.addEventListener('click', function onModalClick(event) {
-      if (event.target === elements.modal) {
-        closeModal();
-      }
-    });
-
-    elements.form.addEventListener('submit', function onSubmit(event) {
-      event.preventDefault();
-      saveIssue();
-    });
-
-    elements.deleteButton.addEventListener('click', function onDeleteButton() {
-      if (state.editingId) {
-        deleteIssue(state.editingId);
-      }
-    });
-
-    elements.list.addEventListener('click', function onListClick(event) {
-      const button = event.target.closest('button[data-action][data-id]');
-      if (!button) {
-        return;
-      }
-
-      const action = button.getAttribute('data-action');
-      const issueId = button.getAttribute('data-id');
-
-      if (action === 'edit') {
-        openModal(getIssueById(issueId));
-        return;
-      }
-
-      if (action === 'delete') {
-        deleteIssue(issueId);
-      }
-    });
-
-    const unsubscribe = AdminApp.subscribeToDataChanges(function onDataChange() {
-      loadData(false);
-    });
-
-    window.addEventListener('beforeunload', unsubscribe);
-
-    loadData(true);
+    loadIssues();
   </script>
 </body>
 </html>

@@ -1,0 +1,6 @@
+- [x] Checkpoint 1: 准确识别样式问题的根本原因
+- [x] Checkpoint 2: 白天模式下输入框显示为白色背景深色文字
+- [x] Checkpoint 3: 白天模式下选择框显示为白色背景深色文字
+- [x] Checkpoint 4: 深色模式下样式保持正确
+- [x] Checkpoint 5: 主题切换时表单元素样式正确响应
+- [x] Checkpoint 6: 所有表单元素样式一致且符合设计

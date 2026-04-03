@@ -1,0 +1,5 @@
+- [x] Checkpoint 1: 准确识别路径名处理逻辑的问题
+- [x] Checkpoint 2: 路径名处理逻辑修复完成
+- [x] Checkpoint 3: 首页访问时地址栏显示正确的根路径
+- [x] Checkpoint 4: 路由导航功能正常工作
+- [x] Checkpoint 5: 修复不影响其他功能

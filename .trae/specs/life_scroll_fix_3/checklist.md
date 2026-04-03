@@ -1,0 +1,11 @@
+- [x] Checkpoint 1: 检查LifeView组件的生命周期
+- [x] Checkpoint 2: 分析从详情页返回时组件是否被重新挂载
+- [x] Checkpoint 3: 检查路由切换机制是否导致组件重新创建
+- [ ] Checkpoint 4: 实现滚动位置的持久化保存
+- [ ] Checkpoint 5: 在离开页面时保存滚动位置
+- [ ] Checkpoint 6: 在进入页面时恢复滚动位置
+- [ ] Checkpoint 7: 从详情页返回时保持正确的滚动位置
+- [ ] Checkpoint 8: 滚动位置保存机制修复完成
+- [ ] Checkpoint 9: 生活随笔页面滚动位置保存正常
+- [ ] Checkpoint 10: 修复不影响其他功能
+- [ ] Checkpoint 11: 滚动位置保存性能良好
