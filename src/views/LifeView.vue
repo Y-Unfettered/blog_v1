@@ -8,18 +8,14 @@
       <div class="mx-auto mt-8 h-px w-12 bg-indigo-500"></div>
     </header>
 
-    <div v-if="loading" class="flex justify-center py-12">
-      <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-    </div>
-
-    <div v-else-if="lifePosts.length === 0" class="text-center py-12">
+    <div v-if="pagedLifePosts.length === 0" class="text-center py-12">
       <AppIcon icon="lucide:alert-circle" class="mx-auto mb-4 text-4xl text-gray-600" />
       <p class="text-sm text-gray-500">暂无生活随笔内容</p>
     </div>
 
     <div v-else class="space-y-24">
       <article
-        v-for="(post, index) in lifePosts"
+        v-for="(post, index) in pagedLifePosts"
         :key="post.id"
         class="group fade-in"
         :style="{ animationDelay: `${0.2 + index * 0.2}s` }"
@@ -48,49 +44,83 @@
             <p class="line-clamp-3 text-sm leading-relaxed text-gray-400 italic">
               {{ post.summary || post.content.substring(0, 150) }}...
             </p>
-            <router-link :to="`/post/${post.slug}`" class="inline-flex items-center border-b border-indigo-500/50 pb-1 text-xs text-white transition-all hover:border-indigo-500">
+            <button class="inline-flex items-center border-b border-indigo-500/50 pb-1 text-xs text-white transition-all hover:border-indigo-500" type="button" @click.stop="emit('open-post', post)">
               继续阅读
               <AppIcon icon="lucide:arrow-right" class="ml-1" />
-            </router-link>
+            </button>
           </div>
         </div>
       </article>
     </div>
 
-    <div class="mt-32 flex justify-center space-x-8 text-[10px] font-bold tracking-widest text-gray-600 uppercase">
-      <button class="transition-colors hover:text-white" type="button">上一页</button>
+    <div v-if="showLifePagination" class="mt-32 flex justify-center space-x-8 text-[10px] font-bold tracking-widest text-gray-600 uppercase">
+      <button 
+        :disabled="lifePage <= 1" 
+        :class="lifePage <= 1 ? 'cursor-not-allowed opacity-50' : 'transition-colors hover:text-white'" 
+        type="button"
+        @click="emit('go-to-life-page', lifePage - 1)"
+      >
+        上一页
+      </button>
       <div class="flex space-x-4">
-        <span class="text-white">01</span>
-        <button class="hover:text-white" type="button">02</button>
-        <button class="hover:text-white" type="button">03</button>
+        <button
+          v-for="page in lifePageNumbers"
+          :key="page"
+          :class="page === lifePage ? 'text-white' : 'hover:text-white'"
+          type="button"
+          @click="emit('go-to-life-page', page)"
+        >
+          {{ String(page).padStart(2, '0') }}
+        </button>
       </div>
-      <button class="transition-colors hover:text-white" type="button">下一页</button>
+      <button 
+        :disabled="lifePage >= lifePageCount" 
+        :class="lifePage >= lifePageCount ? 'cursor-not-allowed opacity-50' : 'transition-colors hover:text-white'" 
+        type="button"
+        @click="emit('go-to-life-page', lifePage + 1)"
+      >
+        下一页
+      </button>
     </div>
   </section>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useBlogData } from '../composables/useBlogData';
+import { computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 
-const { posts, categories } = useBlogData();
-const loading = ref(true);
-
-onMounted(async () => {
-  loading.value = false;
+const props = defineProps({
+  posts: { type: Array, default: () => [] },
+  categories: { type: Array, default: () => [] },
+  lifePosts: { type: Array, default: () => [] },
+  lifePage: { type: Number, default: 1 },
+  lifePageCount: { type: Number, default: 1 },
+  showLifePagination: { type: Boolean, default: false },
+  lifePageNumbers: { type: Array, default: () => [] },
+  pagedLifePosts: { type: Array, default: () => [] },
 });
 
-const lifePosts = computed(() => {
-  const lifeCategoryId = categories.value.find(cat => cat.name === 'Life')?.id;
-  if (!lifeCategoryId) return [];
-  
-  return posts.value
-    .filter(post => post.categoryId === lifeCategoryId)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+const emit = defineEmits(['open-post', 'go-to-life-page']);
+
+const SCROLL_POSITION_KEY = 'life_view_scroll_position';
+
+// Save scroll position before leaving
+onBeforeUnmount(() => {
+  const scrollPosition = window.scrollY;
+  sessionStorage.setItem(SCROLL_POSITION_KEY, scrollPosition.toString());
+});
+
+onMounted(() => {
+  // Restore scroll position after DOM is rendered
+  nextTick(() => {
+    const savedPosition = sessionStorage.getItem(SCROLL_POSITION_KEY);
+    if (savedPosition) {
+      window.scrollTo(0, parseInt(savedPosition));
+    }
+  });
 });
 
 function getPostCategory(post) {
-  const category = categories.value.find(cat => cat.id === post.categoryId);
+  const category = props.categories.find(cat => cat.id === post.categoryId);
   return category?.name || '生活随笔';
 }
 

@@ -434,6 +434,10 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
       columnCategoryId.value = state.columnCategoryId || '';
       columnTagId.value = state.columnTagId || '';
       searchQuery.value = state.searchQuery || '';
+    } else if (targetView === 'life') {
+      view.value = 'life';
+      activePostId.value = '';
+      updateHash('#/life');
     } else {
       setView(targetView);
     }
@@ -445,7 +449,10 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
   function syncFromHash() {
     if (typeof window === 'undefined') return;
 
+    const { hashPath, path, params } = parseHashState(window.location.hash || '#/');
     const pathname = window.location.pathname;
+    
+    // Handle pathname to hash routing
     if (pathname !== '/' && pathname !== '/index.html') {
       const path = pathname.replace(/^\//, '');
       const nav = visibleNavItems.value.find((item) => {
@@ -453,13 +460,19 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
         const itemLabel = String(item.label || '').toLowerCase();
         return itemPath.includes(path) || itemLabel.includes(path);
       });
+      
       if (nav) {
-        setColumnView(nav);
-        return;
+        const targetHash = `#${normalizePath(nav.href)}`;
+        if (hashPath !== targetHash) {
+          // Use replaceState to update both pathname and hash
+          const url = new URL(window.location.href);
+          url.pathname = '/';
+          url.hash = targetHash;
+          window.history.replaceState(null, '', url.toString());
+          return;
+        }
       }
     }
-
-    const { hashPath, path, params } = parseHashState(window.location.hash || '#/');
     const detailPostId = String(params.get('id') || '').trim();
 
     if (hashPath.startsWith('#/post/')) {

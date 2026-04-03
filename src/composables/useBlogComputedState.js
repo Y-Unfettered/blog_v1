@@ -1,4 +1,4 @@
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { COLUMN_PAGE_SIZE, HOME_LIMIT } from '../constants/blog';
 import {
   buildToc,
@@ -169,6 +169,23 @@ export function useBlogComputedState(options) {
     return columnPosts.value.slice(start, start + COLUMN_PAGE_SIZE);
   });
 
+  const lifePosts = computed(() => {
+    const lifeCategoryId = categories.value.find(cat => cat.name === '生活随笔')?.id;
+    if (!lifeCategoryId) return [];
+    return posts.value
+      .filter(post => post.categoryId === lifeCategoryId)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  });
+
+  const lifePage = ref(1);
+  const lifePageCount = computed(() => Math.ceil(lifePosts.value.length / COLUMN_PAGE_SIZE));
+  const showLifePagination = computed(() => lifePageCount.value > 1);
+  const lifePageNumbers = computed(() => Array.from({ length: lifePageCount.value }, (_, index) => index + 1));
+  const pagedLifePosts = computed(() => {
+    const start = (lifePage.value - 1) * COLUMN_PAGE_SIZE;
+    return lifePosts.value.slice(start, start + COLUMN_PAGE_SIZE);
+  });
+
   const columnCategoryCounts = computed(() => {
     const counts = {};
     columnBasePosts.value.forEach((post) => {
@@ -337,6 +354,12 @@ export function useBlogComputedState(options) {
     heroSlides,
     homePosts,
     homeHasMore,
+    lifePosts,
+    lifePage,
+    lifePageCount,
+    showLifePagination,
+    lifePageNumbers,
+    pagedLifePosts,
     designPosts,
     designCategories,
     columnPosts,

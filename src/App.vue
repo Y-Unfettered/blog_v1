@@ -121,7 +121,19 @@
 
         <ToolsView v-else-if="view === 'tools'" />
         <IssuesView v-else-if="view === 'issues'" />
-        <LifeView v-else-if="view === 'life'" />
+        <LifeView 
+          v-else-if="view === 'life'" 
+          :posts="posts" 
+          :categories="categories" 
+          :life-posts="lifePosts"
+          :life-page="lifePage"
+          :life-page-count="lifePageCount"
+          :show-life-pagination="showLifePagination"
+          :life-page-numbers="lifePageNumbers"
+          :paged-life-posts="pagedLifePosts"
+          @open-post="openPost" 
+          @go-to-life-page="lifePage = $event"
+        />
       </div>
     </main>
 
@@ -221,6 +233,12 @@ const {
   heroSlides,
   homePosts,
   homeHasMore,
+  lifePosts,
+  lifePage,
+  lifePageCount,
+  showLifePagination,
+  lifePageNumbers,
+  pagedLifePosts,
   designPosts,
   designCategories,
   columnPosts,
@@ -375,7 +393,7 @@ function setupTocObserver() {
   if (!container) return;
   const headings = Array.from(container.querySelectorAll('h1, h2, h3, h4'));
   if (headings.length === 0) return;
-  activeHeadingId.value = headings[0].id || '';
+  
   tocObserver = new IntersectionObserver(
     (entries) => {
       const visible = entries
@@ -487,6 +505,15 @@ watch(
   () => [view.value, activePost.value?.content],
   async () => {
     await nextTick();
+    if (view.value === 'detail') {
+      const container = document.querySelector('.md-editor-preview');
+      if (container) {
+        const headings = Array.from(container.querySelectorAll('h1, h2, h3, h4'));
+        if (headings.length > 0) {
+          activeHeadingId.value = headings[0].id || '';
+        }
+      }
+    }
     setupTocObserver();
     syncTocScroll();
   },
