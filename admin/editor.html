@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevLog Post Editor</title>
+  <link rel="stylesheet" href="https://unpkg.com/md-editor-v3@2.11.3/lib/style.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/md-editor-v3@2.11.3/lib/md-editor-v3.umd.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+            dark: {
+              bg: '#0a0a0a',
+              surface: '#111111',
+              border: '#1f1f1f',
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="/admin/admin-common.css">
+  <style>
+    .md-editor-dark {
+      --md-editor-bg-color: #111111;
+      --md-editor-color: #e5e7eb;
+      --md-editor-border-color: #1f1f1f;
+    }
+
+    .editor-card {
+      border-radius: 1rem;
+      border: 1px solid rgb(229 231 235);
+      background: white;
+      overflow: hidden;
+    }
+
+    .dark .editor-card {
+      border-color: #1f1f1f;
+      background: #111111;
+    }
+
+    .meta-card {
+      border-radius: 1rem;
+      border: 1px solid rgb(229 231 235);
+      background: white;
+    }
+
+    .dark .meta-card {
+      border-color: #1f1f1f;
+      background: #111111;
+    }
+
+    .tag-chip {
+      border-radius: 9999px;
+      border: 1px solid rgb(229 231 235);
+      background: rgb(249 250 251);
+      transition: all 0.2s ease;
+    }
+
+    .dark .tag-chip {
+      border-color: rgb(55 65 81);
+      background: rgb(17 24 39);
+    }
+
+    .tag-chip:hover {
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-[#0a0a0a] dark:text-gray-100">
+  <div id="admin-app"></div>
+
+  <script src="/admin/admin-common.js"></script>
+  <script>
+    if (!window.AdminApp || !AdminApp.requireAuth()) {
+      throw new Error('Missing admin auth context.');
+    }
+
+    const layout = AdminApp.mountPage({
+      active: 'posts',
+      title: 'Post Editor',
+      description: 'Create or update posts with aligned section, category, tag, summary, cover, and publication metadata.',
+      actions: [
+        {
+          id: 'back-to-posts-btn',
+          label: 'Back to Posts',
+          href: '/admin/posts',
+          className: 'rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800',
+        },
+        {
+          id: 'reload-editor-data-btn',
+          label: 'Reload',
+          className: 'rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800',
+        },
+        {
+          id: 'save-draft-btn',
+          label: 'Save Draft',
+          className: 'rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800',
+        },
+        {
+          id: 'publish-post-btn',
+          label: 'Publish / Update',
+          className: 'rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-colors hover:bg-indigo-700',
+        },
+      ],
+    });
+
+    layout.content.innerHTML = '<div id="editor-app"></div>';
+
+    const editorLibrary = window.MdEditorV3 || window.mdEditorV3 || null;
+    const MdEditorComponent = editorLibrary && (
+      editorLibrary.MdEditor ||
+      (editorLibrary.default && editorLibrary.default.MdEditor) ||
+      editorLibrary.default ||
+      editorLibrary ||
+      null
+    );
+
+    const query = new URLSearchParams(window.location.search);
+    const initialPostId = String(query.get('id') || '').trim();
+    const locale = AdminApp.getLocale();
+    const editorLanguage = locale === 'en' ? 'en-US' : 'zh-CN';
+    const editorCopy = {
+      fallbackTitle: locale === 'en' ? 'Fallback editor' : '备用编辑器',
+      fallbackDescription: locale === 'en'
+        ? 'The Markdown editor library did not load. You can still edit the post content here.'
+        : 'Markdown 编辑器库未能加载，你仍然可以在这里编辑文章内容。',
+      fallbackPlaceholder: locale === 'en'
+        ? 'Write Markdown content here...'
+        : '在这里编写 Markdown 内容...',
+      constraintOne: locale === 'en'
+        ? 'Posts still use one primary category, but are stored with <code>categories</code>, <code>categoryIds</code>, and <code>categoryId</code> aligned.'
+        : '文章仍以一个主分类为主，但会同时写入 <code>categories</code>、<code>categoryIds</code> 和 <code>categoryId</code>，以保持字段对齐。',
+      constraintTwo: locale === 'en'
+        ? 'Tags are saved to both <code>tags</code> and <code>tagIds</code> as ID arrays.'
+        : '标签会同时写入 <code>tags</code> 和 <code>tagIds</code> 两个 ID 数组字段。',
+      constraintThree: locale === 'en'
+        ? 'Saving draft keeps you on this page and updates the URL once the post has an ID.'
+        : '保存草稿后仍会停留在当前页，文章获得 ID 后会同步更新 URL。',
+    };
+
+    function slugify(value, fallback) {
+      const normalized = String(value || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      const fallbackValue = String(fallback || '').trim();
+      return normalized || fallbackValue || ('post-' + Date.now());
+    }
+
+    function createEmptyPost() {
+      return {
+        id: '',
+        title: '',
+        slug: '',
+        sectionId: '',
+        categoryId: '',
+        tagIds: [],
+        summary: '',
+        cover: '',
+        readingTime: '',
+        pinned: false,
+        content: '',
+        status: 'draft',
+        createdAt: '',
+        updatedAt: '',
+      };
+    }
+
+    function toIdArray() {
+      const values = [];
+
+      for (let index = 0; index < arguments.length; index += 1) {
+        const candidate = arguments[index];
+        
+        if (Array.isArray(candidate)) {
+          candidate.forEach(function eachItem(item) {
+            const value = String(item || '').trim();
+            if (value && !values.includes(value)) {
+              values.push(value);
+            }
+          });
+          continue;
+        }
+
+        const single = String(candidate || '').trim();
+        if (single && !values.includes(single)) {
+          values.push(single);
+        }
+      }
+
+      return values;
+    }
+
+    function readFileAsDataUrl(file) {
+      return new Promise(function resolveFile(resolve, reject) {
+        const reader = new FileReader();
+        reader.onload = function onLoad() {
+          resolve(String(reader.result || ''));
+        };
+        reader.onerror = function onError() {
+          reject(new Error('Failed to read image file.'));
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    const { createApp, ref, computed, onMounted, watch } = Vue;
+
+    const app = createApp({
+      template: `
+        <div class="grid gap-6">
+          <section class="meta-card p-6">
+            <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+              <div class="min-w-0 flex-1">
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="post-title-input">Title</label>
+                <input
+                  id="post-title-input"
+                  v-model="post.title"
+                  class="input-control text-2xl font-semibold"
+                  type="text"
+                  maxlength="160"
+                  placeholder="Enter the post title"
+                >
+                <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                  <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="post-slug-input">Slug</label>
+                    <input
+                      id="post-slug-input"
+                      v-model="post.slug"
+                      class="input-control"
+                      type="text"
+                      maxlength="160"
+                      placeholder="post-slug"
+                      @input="slugTouched = true"
+                      @blur="normalizeSlugField"
+                    >
+                  </div>
+                  <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="post-cover-input">Cover URL</label>
+                    <input
+                      id="post-cover-input"
+                      v-model="post.cover"
+                      class="input-control"
+                      type="url"
+                      placeholder="https://example.com/cover.jpg"
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <aside class="grid w-full gap-4 xl:w-[360px]">
+                <div class="rounded-2xl border border-dashed border-gray-200 p-4 dark:border-gray-700">
+                  <div class="admin-kicker text-gray-500 dark:text-gray-400">Status</div>
+                  <div class="mt-2 flex flex-wrap items-center gap-2">
+                    <span class="pill" :class="isPublished ? 'status-published' : 'status-draft'">{{ isPublished ? 'Published' : 'Draft' }}</span>
+                    <span v-if="post.pinned" class="pill" style="background: rgba(99, 102, 241, 0.14); color: #6366f1;">Pinned</span>
+                    <span v-if="isEditing" class="pill" style="background: rgba(15, 23, 42, 0.08); color: #0f172a;">Editing existing post</span>
+                  </div>
+                  <div class="mt-4 space-y-2 text-sm text-gray-500 dark:text-gray-400">
+                    <div>Created: {{ formatDate(post.createdAt) }}</div>
+                    <div>Updated: {{ formatDate(post.updatedAt) }}</div>
+                    <div>Post ID: {{ post.id || 'New draft' }}</div>
+                  </div>
+                </div>
+
+                <div v-if="post.cover" class="overflow-hidden rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                  <img :src="post.cover" :alt="post.title || 'Cover preview'" class="h-48 w-full object-cover">
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div class="grid gap-6">
+              <section class="meta-card p-6">
+                <div class="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="post-section-select">Section</label>
+                    <select id="post-section-select" v-model="post.sectionId" class="select-control">
+                      <option value="">No section</option>
+                      <option v-for="section in sectionOptions" :key="section.id" :value="section.id">{{ section.name || section.slug || section.id }}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="post-category-select">Category</label>
+                    <select id="post-category-select" v-model="post.categoryId" class="select-control">
+                      <option value="">No category</option>
+                      <option v-for="category in categoryOptions" :key="category.id" :value="category.id">{{ category.name || category.slug || category.id }}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="post-reading-time-input">Reading Time (minutes)</label>
+                    <input id="post-reading-time-input" v-model="post.readingTime" class="input-control" type="number" min="1" step="1" placeholder="8">
+                  </div>
+                  <div class="flex items-center gap-3 rounded-2xl border border-dashed border-gray-200 px-4 py-3 dark:border-gray-700">
+                    <input id="post-pinned-input" v-model="post.pinned" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" type="checkbox">
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300" for="post-pinned-input">Pin this post</label>
+                  </div>
+                </div>
+                <div class="mt-4">
+                  <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="post-summary-input">Summary</label>
+                  <textarea id="post-summary-input" v-model="post.summary" class="textarea-control" rows="4" maxlength="320" placeholder="Short summary used by cards, lists, and SEO excerpts."></textarea>
+                </div>
+              </section>
+
+              <section class="editor-card">
+                <div class="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
+                  <div class="admin-kicker text-gray-500 dark:text-gray-400">Markdown</div>
+                  <h2 class="mt-1 text-lg font-semibold text-gray-900 dark:text-white">Post Content</h2>
+                </div>
+                <div class="p-0">
+                  <MdEditor
+                    v-if="editorReady"
+                    v-model="post.content"
+                    :language="editorLanguage"
+                    :theme="themeMode"
+                    :toolbars="toolbars"
+                    class="border-0"
+                    @onUploadImg="onUploadImg"
+                  />
+                  <div v-else class="p-6">
+                    <div class="text-sm font-medium text-gray-700 dark:text-gray-300">${editorCopy.fallbackTitle}</div>
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">${editorCopy.fallbackDescription}</p>
+                    <textarea
+                      v-model="post.content"
+                      class="textarea-control mt-4 min-h-[420px]"
+                      rows="18"
+                      placeholder="${locale === 'en' ? 'Write Markdown content here...' : '在这里编写 Markdown 内容...'}"
+                    ></textarea>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <aside class="grid gap-6">
+              <section class="meta-card p-6">
+                <div class="admin-kicker text-gray-500 dark:text-gray-400">Tags</div>
+                <h2 class="mt-1 text-lg font-semibold text-gray-900 dark:text-white">Tag Selection</h2>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Tags are stored as IDs to stay aligned with the current backend schema.</p>
+                <div class="mt-5 flex flex-wrap gap-2">
+                  <label
+                    v-for="tag in tagOptions"
+                    :key="tag.id"
+                    class="tag-chip inline-flex cursor-pointer items-center gap-2 px-3 py-2 text-sm"
+                    :style="tagChipStyle(tag)"
+                  >
+                    <input v-model="post.tagIds" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" type="checkbox" :value="tag.id">
+                    <span>{{ tag.name || tag.slug || tag.id }}</span>
+                  </label>
+                </div>
+              </section>
+
+              <section class="meta-card p-6">
+                <div class="admin-kicker text-gray-500 dark:text-gray-400">Preview</div>
+                <h2 class="mt-1 text-lg font-semibold text-gray-900 dark:text-white">Resolved Metadata</h2>
+                <div class="mt-5 space-y-3 text-sm text-gray-500 dark:text-gray-400">
+                  <div>Section: <span class="font-medium text-gray-900 dark:text-white">{{ selectedSectionLabel }}</span></div>
+                  <div>Category: <span class="font-medium text-gray-900 dark:text-white">{{ selectedCategoryLabel }}</span></div>
+                  <div>Tags: <span class="font-medium text-gray-900 dark:text-white">{{ selectedTagLabels.join(', ') || 'No tags' }}</span></div>
+                  <div>Internal slug: <span class="font-medium text-gray-900 dark:text-white">{{ post.slug || '(generated automatically)' }}</span></div>
+                  <div>Public route: <span class="font-medium text-gray-900 dark:text-white">{{ publicRoutePreview }}</span></div>
+                </div>
+              </section>
+
+              <section class="meta-card p-6">
+                <div class="admin-kicker text-gray-500 dark:text-gray-400">Notes</div>
+                <h2 class="mt-1 text-lg font-semibold text-gray-900 dark:text-white">Editor Constraints</h2>
+                <ul class="mt-5 space-y-2 text-sm leading-6 text-gray-500 dark:text-gray-400">
+                  <li>${editorCopy.constraintOne}</li>
+                  <li>${editorCopy.constraintTwo}</li>
+                  <li>${editorCopy.constraintThree}</li>
+                </ul>
+              </section>
+            </aside>
+          </section>
+        </div>
+      `,
+      setup: function setupEditor() {
+        const post = ref(createEmptyPost());
+        const sections = ref([]);
+        const categories = ref([]);
+        const tags = ref([]);
+        const isEditing = ref(false);
+        const slugTouched = ref(false);
+        const savingTarget = ref('');
+        const editorReady = ref(!!MdEditorComponent);
+        const themeMode = ref(document.documentElement.classList.contains('light') ? 'light' : 'dark');
+        const currentPostId = ref(initialPostId);
+        const generatedSlugFallback = ref('post-' + Date.now());
+
+        const toolbars = [
+          'bold', 'underline', 'italic', 'strikeThrough', '-',
+          'title', 'quote', 'ul', 'ol', 'task', '-',
+          'link', 'image', 'table', 'mermaid', 'codeRow', 'code', '-',
+          'revoke', 'next', 'save', '=',
+          'pageFullscreen', 'fullscreen', 'preview', 'htmlPreview'
+        ];
+
+        const isPublished = computed(function computePublished() {
+          return post.value.status === 'published';
+        });
+
+        const sectionOptions = computed(function computeSectionOptions() {
+          return sections.value.slice().sort(function sortSections(left, right) {
+            const orderDiff = (Number(left.order) || 0) - (Number(right.order) || 0);
+            if (orderDiff !== 0) return orderDiff;
+            return String(left.name || '').localeCompare(String(right.name || ''));
+          });
+        });
+
+        const categoryOptions = computed(function computeCategoryOptions() {
+          return categories.value
+            .filter(function filterCategory(category) {
+              if (!post.value.sectionId) {
+                return true;
+              }
+              return String(category.sectionId || '') === String(post.value.sectionId || '');
+            })
+            .sort(function sortCategories(left, right) {
+              const orderDiff = (Number(left.order) || 0) - (Number(right.order) || 0);
+              if (orderDiff !== 0) return orderDiff;
+              return String(left.name || '').localeCompare(String(right.name || ''));
+            });
+        });
+
+        const tagOptions = computed(function computeTagOptions() {
+          return tags.value.slice().sort(function sortTags(left, right) {
+            return String(left.name || left.slug || '').localeCompare(String(right.name || right.slug || ''));
+          });
+        });
+
+        const selectedSection = computed(function computeSelectedSection() {
+          return sections.value.find(function matchSection(item) {
+            return String(item.id) === String(post.value.sectionId || '');
+          });
+        });
+
+        const selectedSectionLabel = computed(function computeSelectedSectionLabel() {
+          return selectedSection.value
+            ? (selectedSection.value.name || selectedSection.value.slug || selectedSection.value.id)
+            : 'No section';
+        });
+
+        const selectedCategory = computed(function computeSelectedCategory() {
+          return categories.value.find(function matchCategory(item) {
+            return String(item.id) === String(post.value.categoryId || '');
+          });
+        });
+
+        const selectedCategoryLabel = computed(function computeSelectedCategoryLabel() {
+          return selectedCategory.value
+            ? (selectedCategory.value.name || selectedCategory.value.slug || selectedCategory.value.id)
+            : 'No category';
+        });
+
+        const selectedTagLabels = computed(function computeSelectedTagLabels() {
+          return post.value.tagIds
+            .map(function mapTag(tagId) {
+              const tag = tags.value.find(function matchTag(item) {
+                return String(item.id) === String(tagId);
+              });
+              return tag ? (tag.name || tag.slug || tag.id) : tagId;
+            })
+            .filter(Boolean);
+        });
+
+        const publicRoutePreview = computed(function computePublicRoutePreview() {
+          const sectionSegment = String(
+            (selectedSection.value && (selectedSection.value.slug || selectedSection.value.url || selectedSection.value.id)) ||
+            ''
+          )
+            .trim()
+            .replace(/^#?\/+/, '')
+            .replace(/\/+$/g, '');
+          const categorySegment = String(
+            (selectedCategory.value && (selectedCategory.value.slug || selectedCategory.value.id)) ||
+            ''
+          )
+            .trim()
+            .replace(/^\/+|\/+$/g, '');
+          const routeParts = [];
+
+          if (sectionSegment) {
+            routeParts.push(sectionSegment);
+          }
+          if (categorySegment) {
+            routeParts.push(categorySegment);
+          }
+
+          const postId = String(post.value.id || currentPostId.value || 'new').trim() || 'new';
+          const basePath = routeParts.length ? ('/#/' + routeParts.join('/')) : '/#/post';
+          return basePath + '?id=' + encodeURIComponent(postId);
+        });
+
+        function syncThemeMode() {
+          themeMode.value = document.documentElement.classList.contains('light') ? 'light' : 'dark';
+        }
+
+        function formatDate(value) {
+          return AdminApp.formatDateTime(value);
+        }
+
+        function resetGeneratedSlugFallback() {
+          generatedSlugFallback.value = 'post-' + Date.now();
+        }
+
+        function resolveSlugFallback(postId) {
+          const normalizedId = String(postId || currentPostId.value || '').trim();
+          return normalizedId ? ('post-' + normalizedId) : generatedSlugFallback.value;
+        }
+
+        function normalizeSlugField() {
+          if (!slugTouched.value) {
+            return;
+          }
+          post.value.slug = slugify(post.value.slug, resolveSlugFallback(post.value.id));
+        }
+
+        function tagChipStyle(tag) {
+          const color = String(tag.color || '').trim();
+          if (!/^#[0-9a-f]{6}$/i.test(color)) {
+            return {};
+          }
+
+          const active = post.value.tagIds.includes(String(tag.id));
+          const red = parseInt(color.slice(1, 3), 16);
+          const green = parseInt(color.slice(3, 5), 16);
+          const blue = parseInt(color.slice(5, 7), 16);
+
+          return {
+            borderColor: active ? color : '',
+            background: 'rgba(' + red + ', ' + green + ', ' + blue + ', ' + (active ? '0.16' : '0.08') + ')',
+            color: color,
+          };
+        }
+
+        function normalizeLoadedPost(data) {
+          const next = createEmptyPost();
+          const categoryIds = toIdArray(data.categories, data.categoryIds, data.categoryId);
+          const tagIds = toIdArray(data.tags, data.tagIds);
+
+          next.id = String(data.id || '').trim();
+          next.title = String(data.title || '').trim();
+          next.slug = String(data.slug || '').trim();
+          next.sectionId = String(data.sectionId || '').trim();
+          next.categoryId = categoryIds[0] || '';
+          next.tagIds = tagIds;
+          next.summary = String(data.summary || '').trim();
+          next.cover = String(data.cover || '').trim();
+          next.readingTime = data.readingTime !== undefined && data.readingTime !== null
+            ? String(data.readingTime)
+            : '';
+          next.pinned = !!data.pinned;
+          next.content = String(data.content || '');
+          next.status = data.status === 'published' || data.published ? 'published' : 'draft';
+          next.createdAt = String(data.createdAt || data.created_at || '').trim();
+          next.updatedAt = String(data.updatedAt || data.updated_at || '').trim();
+          return next;
+        }
+
+        function buildPayload(status) {
+          const categoryIds = toIdArray(post.value.categoryId);
+          const tagIds = toIdArray(post.value.tagIds);
+          const category = categories.value.find(function matchCategory(item) {
+            return String(item.id) === String(post.value.categoryId || '');
+          });
+          const sectionId = String(
+            post.value.sectionId ||
+            (category && category.sectionId) ||
+            ''
+          ).trim();
+
+          return {
+            title: String(post.value.title || '').trim(),
+            slug: slugify(post.value.slug || post.value.title, resolveSlugFallback(post.value.id)),
+            sectionId: sectionId,
+            categories: categoryIds,
+            categoryIds: categoryIds,
+            categoryId: categoryIds[0] || '',
+            tags: tagIds,
+            tagIds: tagIds,
+            summary: String(post.value.summary || '').trim(),
+            cover: String(post.value.cover || '').trim(),
+            readingTime: post.value.readingTime ? Number(post.value.readingTime) : undefined,
+            pinned: !!post.value.pinned,
+            content: String(post.value.content || ''),
+            status: status,
+            published: status === 'published',
+          };
+        }
+
+        async function loadReferenceData(showMessage) {
+          try {
+            if (showMessage) {
+              layout.setNotice('Loading sections, categories, and tags...', 'info');
+            }
+
+            const results = await Promise.all([
+              AdminApp.requestJson('/api/data/sections'),
+              AdminApp.requestJson('/api/data/categories'),
+              AdminApp.requestJson('/api/data/tags'),
+            ]);
+
+            sections.value = Array.isArray(results[0]) ? results[0] : [];
+            categories.value = Array.isArray(results[1]) ? results[1] : [];
+            tags.value = Array.isArray(results[2]) ? results[2] : [];
+
+            if (post.value.categoryId) {
+              const category = categories.value.find(function matchCategory(item) {
+                return String(item.id) === String(post.value.categoryId || '');
+              });
+              if (category && category.sectionId) {
+                post.value.sectionId = String(category.sectionId);
+              }
+            }
+
+            if (showMessage) {
+              layout.setNotice('Reference data loaded.', 'success');
+            }
+          } catch (error) {
+            layout.setNotice(error.message || 'Failed to load reference data.', 'error');
+          }
+        }
+
+        async function loadPost(postId, showMessage) {
+          if (!postId) {
+            post.value = createEmptyPost();
+            currentPostId.value = '';
+            isEditing.value = false;
+            slugTouched.value = false;
+            resetGeneratedSlugFallback();
+            syncHeaderButtons();
+            return;
+          }
+
+          try {
+            if (showMessage) {
+              layout.setNotice('Loading post data...', 'info');
+            }
+
+            const data = await AdminApp.requestJson('/api/data/posts/' + encodeURIComponent(postId));
+            post.value = normalizeLoadedPost(data || {});
+            currentPostId.value = String(post.value.id || postId);
+            isEditing.value = !!post.value.id;
+            slugTouched.value = !!post.value.slug;
+            syncHeaderButtons();
+
+            if (showMessage) {
+              layout.setNotice('Post data loaded.', 'success');
+            }
+          } catch (error) {
+            layout.setNotice(error.message || 'Failed to load post.', 'error');
+          }
+        }
+
+        async function reloadAllData() {
+          await loadReferenceData(true);
+          if (currentPostId.value) {
+            await loadPost(currentPostId.value, false);
+          }
+        }
+
+        function updateUrlForPost(postId) {
+          if (!postId) {
+            return;
+          }
+          const nextUrl = '/admin/editor?id=' + encodeURIComponent(postId);
+          window.history.replaceState({}, '', nextUrl);
+        }
+
+        function redirectToPostsList() {
+          window.setTimeout(function redirectAfterPublish() {
+            window.location.assign('/admin/posts');
+          }, 240);
+        }
+
+        async function persist(status) {
+          const title = String(post.value.title || '').trim();
+          const content = String(post.value.content || '').trim();
+
+          if (!title) {
+            layout.setNotice('Post title is required.', 'error');
+            return;
+          }
+
+          if (status === 'published' && !content) {
+            layout.setNotice('Post content is required before publishing.', 'error');
+            return;
+          }
+
+          if (savingTarget.value) {
+            return;
+          }
+
+          savingTarget.value = status;
+          try {
+            layout.setNotice(status === 'published' ? 'Publishing post...' : 'Saving draft...', 'info');
+
+            const editingNow = !!post.value.id;
+            const response = await AdminApp.requestJson(
+              editingNow
+                ? ('/api/data/posts/' + encodeURIComponent(post.value.id))
+                : '/api/data/posts',
+              {
+                method: editingNow ? 'PATCH' : 'POST',
+                body: buildPayload(status),
+              }
+            );
+
+            const responsePost = response && response.data ? response.data : null;
+            const resolvedId = String(
+              (responsePost && responsePost.id) ||
+              response.id ||
+              response.postId ||
+              post.value.id ||
+              ''
+            ).trim();
+
+            if (responsePost) {
+              post.value = normalizeLoadedPost(responsePost);
+            }
+
+            if (resolvedId) {
+              currentPostId.value = resolvedId;
+              post.value.id = resolvedId;
+              isEditing.value = true;
+              updateUrlForPost(resolvedId);
+              if (!responsePost) {
+                await loadPost(resolvedId, false);
+              }
+            }
+
+            syncHeaderButtons();
+            layout.setNotice(status === 'published' ? 'Post published.' : 'Draft saved.', 'success');
+            if (status === 'published') {
+              redirectToPostsList();
+            }
+          } catch (error) {
+            layout.setNotice(error.message || 'Failed to save post.', 'error');
+          } finally {
+            savingTarget.value = '';
+          }
+        }
+
+        async function saveDraft() {
+          await persist('draft');
+        }
+
+        async function publishPost() {
+          await persist('published');
+        }
+
+        async function onUploadImg(files, callback) {
+          try {
+            const urls = await Promise.all(Array.from(files || []).map(readFileAsDataUrl));
+            callback(urls);
+            layout.setNotice('Inserted local image files as data URLs.', 'success');
+          } catch (error) {
+            layout.setNotice(error.message || 'Failed to read image files.', 'error');
+          }
+        }
+
+        function syncHeaderButtons() {
+          const saveButton = document.getElementById('save-draft-btn');
+          const publishButton = document.getElementById('publish-post-btn');
+
+          if (saveButton) {
+            saveButton.textContent = savingTarget.value === 'draft'
+              ? 'Saving Draft...'
+              : 'Save Draft';
+            saveButton.disabled = !!savingTarget.value;
+          }
+
+          if (publishButton) {
+            publishButton.textContent = savingTarget.value === 'published'
+              ? 'Publishing...'
+              : (isEditing.value ? 'Update & Publish' : 'Publish');
+            publishButton.disabled = !!savingTarget.value;
+          }
+        }
+
+        watch(function watchTitle() {
+          return post.value.title;
+        }, function onTitleChange(nextTitle) {
+          if (!slugTouched.value) {
+            post.value.slug = slugify(nextTitle, resolveSlugFallback(post.value.id));
+          }
+        });
+
+        watch(function watchCategory() {
+          return post.value.categoryId;
+        }, function onCategoryChange(nextCategoryId) {
+          const category = categories.value.find(function matchCategory(item) {
+            return String(item.id) === String(nextCategoryId || '');
+          });
+          if (category && category.sectionId) {
+            post.value.sectionId = String(category.sectionId);
+          }
+        });
+
+        watch(function watchSection() {
+          return post.value.sectionId;
+        }, function onSectionChange(nextSectionId) {
+          if (!post.value.categoryId) {
+            return;
+          }
+          const category = categories.value.find(function matchCategory(item) {
+            return String(item.id) === String(post.value.categoryId || '');
+          });
+          if (category && nextSectionId && String(category.sectionId || '') !== String(nextSectionId)) {
+            post.value.categoryId = '';
+          }
+        });
+
+        watch(isEditing, syncHeaderButtons);
+        watch(savingTarget, syncHeaderButtons);
+
+        onMounted(async function onEditorMounted() {
+          syncHeaderButtons();
+
+          const observer = new MutationObserver(syncThemeMode);
+          observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class'],
+          });
+
+          window.addEventListener('beforeunload', function cleanupThemeObserver() {
+            observer.disconnect();
+          }, { once: true });
+
+          await loadReferenceData(false);
+          if (currentPostId.value) {
+            await loadPost(currentPostId.value, true);
+          } else {
+            syncHeaderButtons();
+            layout.setNotice('Ready to create a new post.', 'info');
+          }
+        });
+
+        return {
+          post: post,
+          isEditing: isEditing,
+          isPublished: isPublished,
+          toolbars: toolbars,
+          editorReady: editorReady,
+          editorLanguage: editorLanguage,
+          themeMode: themeMode,
+          sectionOptions: sectionOptions,
+          categoryOptions: categoryOptions,
+          tagOptions: tagOptions,
+          selectedSectionLabel: selectedSectionLabel,
+          selectedCategoryLabel: selectedCategoryLabel,
+          selectedTagLabels: selectedTagLabels,
+          publicRoutePreview: publicRoutePreview,
+          slugTouched: slugTouched,
+          normalizeSlugField: normalizeSlugField,
+          formatDate: formatDate,
+          tagChipStyle: tagChipStyle,
+          loadReferenceData: loadReferenceData,
+          loadPost: loadPost,
+          reloadAllData: reloadAllData,
+          saveDraft: saveDraft,
+          publishPost: publishPost,
+          onUploadImg: onUploadImg,
+        };
+      },
+    });
+
+    if (MdEditorComponent) {
+      app.component('MdEditor', MdEditorComponent);
+    }
+
+    const vm = app.mount('#editor-app');
+
+    document.getElementById('reload-editor-data-btn').addEventListener('click', function onReloadClick() {
+      vm.reloadAllData();
+    });
+
+    document.getElementById('save-draft-btn').addEventListener('click', function onSaveDraftClick() {
+      vm.saveDraft();
+    });
+
+    document.getElementById('publish-post-btn').addEventListener('click', function onPublishClick() {
+      vm.publishPost();
+    });
+
+    const unsubscribe = AdminApp.subscribeToDataChanges(function onDataChange(event) {
+      try {
+        const payload = JSON.parse(String(event.data || '{}'));
+        if (payload.dataType === 'sections' || payload.dataType === 'categories' || payload.dataType === 'tags') {
+          vm.loadReferenceData(false);
+        }
+      } catch (error) {
+        // Ignore malformed event payloads.
+      }
+    });
+
+    window.addEventListener('beforeunload', unsubscribe);
+  </script>
+</body>
+</html>

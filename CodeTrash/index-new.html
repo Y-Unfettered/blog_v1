@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevLog 后台管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .sidebar { transition: width 0.3s ease; }
+    .sidebar.collapsed { width: 64px; }
+    .sidebar-item { transition: all 0.3s; }
+    .sidebar-item:hover { background: rgba(99, 102, 241, 0.1); border-right: 3px solid #6366f1; }
+    .sidebar-item.active { background: rgba(99, 102, 241, 0.2); border-right: 3px solid #6366f1; color: #818cf8; }
+    .sidebar-text { transition: opacity 0.3s; }
+    .sidebar.collapsed .sidebar-text { opacity: 0; pointer-events: none; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .stat-card { transition: transform 0.3s, box-shadow 0.3s; }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 10px 40px rgba(99, 102, 241, 0.1); }
+    .post-row { transition: all 0.2s; }
+    .post-row:hover { background: rgba(99, 102, 241, 0.05); }
+    .pagination-btn { @apply px-3 py-1 text-sm rounded border border-gray-700 hover:bg-indigo-600 hover:border-indigo-600 transition-colors; }
+    .pagination-btn.active { @apply bg-indigo-600 border-indigo-600 text-white; }
+    .pagination-btn:disabled { @apply opacity-50 cursor-not-allowed; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100 h-screen overflow-hidden">
+  
+  <!-- 顶部导航栏 -->
+  <header class="h-14 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 flex-shrink-0">
+    <div class="flex items-center gap-3">
+      <button onclick="toggleSidebar()" class="p-2 hover:bg-gray-700 rounded-lg">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </button>
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+          </svg>
+        </div>
+        <h1 class="text-lg font-bold sidebar-text">DevLog</h1>
+      </div>
+    </div>
+    
+    <!-- 右上角：服务器状态 + 主题切换 -->
+    <div class="flex items-center gap-4">
+      <!-- 服务器状态 -->
+      <div class="flex items-center gap-2 px-3 py-1.5 bg-green-900/20 rounded-full">
+        <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+        <span class="text-xs text-green-400 sidebar-text">运行中</span>
+      </div>
+      
+      <!-- 主题切换 -->
+      <button onclick="toggleTheme()" class="p-2 hover:bg-gray-700 rounded-lg" title="切换主题">
+        <svg id="themeIcon" class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+        </svg>
+      </button>
+      
+      <!-- 用户菜单 -->
+      <div class="flex items-center gap-2 pl-4 border-l border-gray-700">
+        <span class="text-sm sidebar-text">管理员</span>
+        <button onclick="logout()" class="p-2 hover:bg-gray-700 rounded-lg">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex h-[calc(100vh-56px)]">
+    <!-- 左侧导航栏 -->
+    <aside id="sidebar" class="sidebar w-52 bg-gray-800 border-r border-gray-700 flex-shrink-0 overflow-y-auto no-scrollbar">
+      <nav class="py-4">
+        <div class="sidebar-item active px-4 py-3 cursor-pointer flex items-center gap-3" onclick="showPage('dashboard', this)">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+          </svg>
+          <span class="sidebar-text">概览</span>
+        </div>
+        <div class="sidebar-item px-4 py-3 cursor-pointer flex items-center gap-3" onclick="showPage('posts', this)">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          <span class="sidebar-text">文章管理</span>
+        </div>
+        <div class="sidebar-item px-4 py-3 cursor-pointer flex items-center gap-3" onclick="showPage('sections', this)">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+          </svg>
+          <span class="sidebar-text">栏目管理</span>
+        </div>
+        <div class="sidebar-item px-4 py-3 cursor-pointer flex items-center gap-3" onclick="showPage('categories', this)">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+          </svg>
+          <span class="sidebar-text">分类管理</span>
+        </div>
+        <div class="sidebar-item px-4 py-3 cursor-pointer flex items-center gap-3" onclick="showPage('tags', this)">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+          </svg>
+          <span class="sidebar-text">标签管理</span>
+        </div>
+        <div class="sidebar-item px-4 py-3 cursor-pointer flex items-center gap-3" onclick="showPage('settings', this)">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+          <span class="sidebar-text">系统设置</span>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 p-4 overflow-y-auto no-scrollbar">
+      <!-- 页面内容将通过 JavaScript 动态加载 -->
+      <div id="page-container"></div>
+    </main>
+  </div>
+
+  <script>
+    // 全局数据
+    let allPosts = [];
+    let allCategories = [];
+    let allTags = [];
+    let currentPage = 1;
+    const pageSize = 10;
+    let sectionsPage = 1;
+    let categoriesPage = 1;
+    let tagsPage = 1;
+
+    // 主题切换
+    function initTheme() {
+      const theme = localStorage.getItem('theme') || 'system';
+      setTheme(theme);
+    }
+    
+    function setTheme(theme) {
+      localStorage.setItem('theme', theme);
+      const html = document.documentElement;
+      const body = document.body;
+      
+      html.classList.remove('light', 'dark');
+      body.classList.remove('bg-gray-900', 'text-gray-100', 'bg-gray-50', 'text-gray-900');
+      
+      if (theme === 'system') {
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (systemDark) {
+          html.classList.add('dark');
+          body.classList.add('bg-gray-900', 'text-gray-100');
+        } else {
+          html.classList.add('light');
+          body.classList.add('bg-gray-50', 'text-gray-900');
+        }
+      } else if (theme === 'dark') {
+        html.classList.add('dark');
+        body.classList.add('bg-gray-900', 'text-gray-100');
+      } else {
+        html.classList.add('light');
+        body.classList.add('bg-gray-50', 'text-gray-900');
+      }
+    }
+    
+    function toggleThemeMenu() {
+      document.getElementById('themeMenu').classList.toggle('hidden');
+    }
+    
+    // 侧边栏折叠
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('collapsed');
+    }
+    
+    // 页面切换
+    function showPage(pageId, sidebarEl) {
+      document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+      if (sidebarEl) sidebarEl.classList.add('active');
+      
+      // 加载对应页面内容
+      loadPage(pageId);
+    }
+    
+    // 加载页面内容
+    function loadPage(pageId) {
+      const container = document.getElementById('page-container');
+      container.innerHTML = '';
+      
+      const page = document.createElement('div');
+      page.id = 'page-' + pageId;
+      page.className = 'page active';
+      
+      // 先添加到 DOM
+      container.appendChild(page);
+      
+      // 再加载内容（这样 getElementById 才能找到元素）
+      if (pageId === 'dashboard') loadDashboard(page);
+      else if (pageId === 'posts') loadPosts(page);
+      else if (pageId === 'sections') loadSections(page);
+      else if (pageId === 'categories') loadCategories(page);
+      else if (pageId === 'tags') loadTags(page);
+      else if (pageId === 'settings') loadSettings(page);
+    }
+    
+    // 加载 Dashboard
+    function loadDashboard(container) {
+      container.innerHTML = `
+        <h2 class="text-2xl font-bold mb-4">Dashboard 概览</h2>
+        
+        <!-- 统计卡片 -->
+        <div class="grid grid-cols-4 gap-4 mb-4">
+          <div class="bg-gray-800 border border-gray-700 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="w-8 h-8 bg-indigo-600/20 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+              </div>
+              <span id="postTrend" class="text-green-400 text-xs">+0%</span>
+            </div>
+            <div class="text-gray-400 text-xs mb-0.5">文章总数</div>
+            <div class="text-xl font-bold" id="postCount">0</div>
+          </div>
+          <div class="bg-gray-800 border border-gray-700 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="w-8 h-8 bg-purple-600/20 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                </svg>
+              </div>
+              <span class="text-gray-500 text-xs">--</span>
+            </div>
+            <div class="text-gray-400 text-xs mb-0.5">分类数量</div>
+            <div class="text-xl font-bold" id="categoryCount">0</div>
+          </div>
+          <div class="bg-gray-800 border border-gray-700 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="w-8 h-8 bg-pink-600/20 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                </svg>
+              </div>
+              <span class="text-gray-500 text-xs">--</span>
+            </div>
+            <div class="text-gray-400 text-xs mb-0.5">标签数量</div>
+            <div class="text-xl font-bold" id="tagCount">0</div>
+          </div>
+          <div class="bg-gray-800 border border-gray-700 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="w-8 h-8 bg-green-600/20 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+              </div>
+              <span class="text-gray-500 text-xs">--</span>
+            </div>
+            <div class="text-gray-400 text-xs mb-0.5">草稿箱</div>
+            <div class="text-xl font-bold" id="draftCount">0</div>
+          </div>
+        </div>
+
+        <!-- 发布趋势 + 最近文章 -->
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="bg-gray-800 border border-gray-700 rounded-xl p-4">
+            <h3 class="text-sm font-bold mb-2">文章发布趋势</h3>
+            <div class="h-32 flex items-end justify-between gap-1" id="trendChart"></div>
+            <div class="flex justify-between mt-1 text-xs text-gray-500" id="trendLabels"></div>
+          </div>
+          <div class="bg-gray-800 border border-gray-700 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-bold">最近文章</h3>
+              <a href="#" onclick="showPage('posts', document.querySelectorAll('.sidebar-item')[1])" class="text-indigo-400 hover:text-indigo-300 text-xs">全部 →</a>
+            </div>
+            <div id="recentPosts" class="space-y-1"></div>
+          </div>
+        </div>
+
+        <!-- 系统状态 -->
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4">
+          <h3 class="text-sm font-bold mb-3">系统状态</h3>
+          <div class="grid grid-cols-3 gap-3">
+            <div class="flex items-center gap-3 p-3 bg-gray-700/50 rounded-lg">
+              <div class="w-7 h-7 bg-green-600/20 rounded-lg flex items-center justify-center">
+                <svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12l2 2l10 -10"></path>
+                </svg>
+              </div>
+              <div><div class="text-xs text-gray-500">服务状态</div><div class="text-sm font-medium">运行中</div></div>
+            </div>
+            <div class="flex items-center gap-3 p-3 bg-gray-700/50 rounded-lg">
+              <div class="w-7 h-7 bg-indigo-600/20 rounded-lg flex items-center justify-center">
+                <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2 -1l-2 -1m2 1v2.5M14 4l-2 -1l-2 1M4 7l2 -1M4 7l2 1M4 7v2.5M12 21l-2 -1m2 1l2 -1m-2 1v-2.5M6 18l-2 -1v-2.5M18 18l2 -1v-2.5"></path>
+                </svg>
+              </div>
+              <div><div class="text-xs text-gray-500">Node 版本</div><div class="text-sm font-medium" id="nodeVersion">v24.12.0</div></div>
+            </div>
+            <div class="flex items-center gap-3 p-3 bg-gray-700/50 rounded-lg">
+              <div class="w-7 h-7 bg-purple-600/20 rounded-lg flex items-center justify-center">
+                <svg class="w-3.5 h-3.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <div><div class="text-xs text-gray-500">运行时间</div><div class="text-sm font-medium" id="uptime">--</div></div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // 加载数据
+      loadDashboardData();
+    }
+    
+    // 加载 Dashboard 数据
+    async function loadDashboardData() {
+      const token = localStorage.getItem('token');
+      try {
+        const [posts, categories, tags] = await Promise.all([
+          fetch('/api/data/posts', {headers:{Authorization:`Bearer ${token}`}}).then(r => r.ok ? r.json() : []),
+          fetch('/api/data/categories', {headers:{Authorization:`Bearer ${token}`}}).then(r => r.ok ? r.json() : []),
+          fetch('/api/data/tags', {headers:{Authorization:`Bearer ${token}`}}).then(r => r.ok ? r.json() : [])
+        ]);
+        
+        allPosts = posts; allCategories = categories; allTags = tags;
+        
+        document.getElementById('postCount').textContent = posts.length;
+        document.getElementById('categoryCount').textContent = categories.length;
+        document.getElementById('tagCount').textContent = tags.length;
+        document.getElementById('draftCount').textContent = posts.filter(p => !p.published).length;
+        
+        renderTrendChart(posts);
+        loadRecentPosts(posts);
+        loadSystemInfo();
+      } catch (e) { console.error('Load dashboard failed:', e); }
+    }
+    
+    // 渲染趋势图
+    function renderTrendChart(posts) {
+      const days = 7;
+      const now = new Date();
+      const data = [], labels = [];
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date(now); date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        labels.push(date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }));
+        data.push(posts.filter(p => p.created_at && p.created_at.startsWith(dateStr)).length);
+      }
+      const max = Math.max(...data, 1);
+      document.getElementById('trendChart').innerHTML = data.map(v => 
+        `<div class="flex-1 flex flex-col items-center"><div class="w-full bg-gray-700 rounded-t" style="height:${128*(1-v/max)}px;position:relative"><div class="absolute bottom-0 w-full bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t transition-all" style="height:${v/max*100}%"></div></div></div>`
+      ).join('');
+      document.getElementById('trendLabels').innerHTML = labels.map(l => `<span class="flex-1 text-center">${l}</span>`).join('');
+    }
+    
+    // 加载最近文章
+    function loadRecentPosts(posts) {
+      const recent = posts.slice().sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0)).slice(0, 5);
+      document.getElementById('recentPosts').innerHTML = recent.map(p => {
+        const date = p.created_at ? new Date(p.created_at).toLocaleDateString('zh-CN', {month:'numeric',day:'numeric'}) : '-';
+        return `<div class="flex items-center justify-between p-2.5 bg-gray-700/30 rounded-lg hover:bg-gray-700/60 transition-colors cursor-pointer" onclick="editPost('${p.id}')">
+          <div class="flex-1 min-w-0 flex items-center gap-3">
+            <div class="w-1 h-8 bg-indigo-500 rounded-full flex-shrink-0"></div>
+            <div class="flex-1 min-w-0"><div class="text-sm font-medium truncate">${escapeHtml(p.title)}</div></div>
+            <div class="flex items-center gap-3 flex-shrink-0">
+              <span class="text-xs text-gray-500">${date}</span>
+              <span class="px-2 py-0.5 text-xs rounded-full ${p.published?'bg-green-500/20 text-green-400':'bg-yellow-500/20 text-yellow-400'}">${p.published?'已发布':'草稿'}</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    
+    function loadSystemInfo() {
+      const start = Date.now();
+      setInterval(() => {
+        const e = Date.now() - start;
+        const h = Math.floor(e/3600000), m = Math.floor((e%3600000)/60000), s = Math.floor((e%60000)/1000);
+        document.getElementById('uptime').textContent = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+      }, 1000);
+    }
+    
+    // 加载文章管理
+    function loadPosts(container) {
+      container.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold">文章管理</h2>
+          <button onclick="createPost()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            新建文章
+          </button>
+        </div>
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 mb-4 flex gap-3">
+          <input type="text" id="postSearch" placeholder="搜索标题..." class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-indigo-500">
+          <select id="categoryFilter" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-indigo-500">
+            <option value="">全部分类</option>
+          </select>
+          <select id="statusFilter" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-indigo-500">
+            <option value="">全部状态</option>
+            <option value="published">已发布</option>
+            <option value="draft">草稿</option>
+          </select>
+        </div>
+        <div class="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-700/50">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">标题</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">分类</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">状态</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">日期</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">操作</th>
+              </tr>
+            </thead>
+            <tbody id="postsTableBody" class="divide-y divide-gray-700"></tbody>
+          </table>
+        </div>
+        <div class="flex items-center justify-between mt-4">
+          <div class="text-sm text-gray-500">
+            第 <span id="currentPage">1</span> / <span id="totalPages">1</span> 页，共 <span id="totalPosts">0</span> 篇
+          </div>
+          <div class="flex gap-2" id="pagination"></div>
+        </div>
+      `;
+      loadPostsTable();
+    }
+    
+    // 加载文章表格
+    function loadPostsTable() {
+      const token = localStorage.getItem('token');
+      fetch('/api/data/posts', {headers:{Authorization:`Bearer ${token}`}})
+        .then(r => r.ok ? r.json() : [])
+        .then(posts => {
+          allPosts = posts;
+          const total = posts.length;
+          const totalPages = Math.ceil(total / pageSize);
+          if (currentPage > totalPages) currentPage = totalPages || 1;
+          const start = (currentPage - 1) * pageSize;
+          const pageData = posts.slice(start, start + pageSize);
+          
+          document.getElementById('postsTableBody').innerHTML = pageData.map(p => {
+            const cat = allCategories.find(c => c.id === p.categoryId);
+            const date = p.created_at ? p.created_at.split('T')[0] : '-';
+            return `<tr class="post-row">
+              <td class="px-4 py-3"><div class="text-sm truncate max-w-md">${escapeHtml(p.title)}</div></td>
+              <td class="px-4 py-3"><span class="text-sm text-gray-400">${cat?cat.name:'-'}</span></td>
+              <td class="px-4 py-3"><span class="px-2 py-1 text-xs rounded-full ${p.published?'bg-green-500/20 text-green-400':'bg-yellow-500/20 text-yellow-400'}">${p.published?'已发布':'草稿'}</span></td>
+              <td class="px-4 py-3"><span class="text-sm text-gray-400">${date}</span></td>
+              <td class="px-4 py-3 text-right"><button onclick="editPost('${p.id}')" class="text-indigo-400 hover:text-indigo-300 text-sm">编辑</button></td>
+            </tr>`;
+          }).join('');
+          
+          document.getElementById('currentPage').textContent = currentPage;
+          document.getElementById('totalPages').textContent = totalPages;
+          document.getElementById('totalPosts').textContent = total;
+          
+          let html = `<button onclick="changePage(${currentPage-1})" ${currentPage===1?'disabled':''} class="pagination-btn">上一页</button>`;
+          for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage-1 && i <= currentPage+1)) {
+              html += `<button onclick="changePage(${i})" class="pagination-btn ${i===currentPage?'active':''}">${i}</button>`;
+            } else if (i === currentPage-2 || i === currentPage+2) {
+              html += `<span class="px-2 text-gray-500">...</span>`;
+            }
+          }
+          html += `<button onclick="changePage(${currentPage+1})" ${currentPage===totalPages?'disabled':''} class="pagination-btn">下一页</button>`;
+          document.getElementById('pagination').innerHTML = html;
+        });
+    }
+    
+    function changePage(p) {
+      const totalPages = Math.ceil(allPosts.length / pageSize);
+      if (p < 1 || p > totalPages) return;
+      currentPage = p;
+      loadPostsTable();
+    }
+    
+    // 加载栏目管理
+    function loadSections(container) {
+      container.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold">栏目管理</h2>
+          <button onclick="addSection()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            新增栏目
+          </button>
+        </div>
+        <div class="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-700/50">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">排序</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">名称</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Slug</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">类型</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">图标</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">颜色</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">分类数</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">操作</th>
+              </tr>
+            </thead>
+            <tbody id="sectionsTableBody" class="divide-y divide-gray-700"></tbody>
+          </table>
+        </div>
+        <div class="flex items-center justify-between mt-4">
+          <div class="text-sm text-gray-500">
+            第 <span id="sectionsCurrentPage">1</span> / <span id="sectionsTotalPages">1</span> 页，共 <span id="sectionsTotal">0</span> 个
+          </div>
+          <div class="flex gap-2" id="sectionsPagination"></div>
+        </div>
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 mt-4">
+          <h3 class="text-sm font-bold mb-2">说明</h3>
+          <ul class="text-xs text-gray-400 space-y-1">
+            <li>• <strong>首页</strong>：展示最新文章和精选推荐（轮播）</li>
+            <li>• <strong>关于我</strong>：个人介绍、技能栈、联系方式</li>
+            <li>• <strong>其他栏目</strong>：设计创作、技术笔记、工具分享、问题记录、生活随笔</li>
+          </ul>
+        </div>
+      `;
+      loadSectionsTable();
+    }
+    
+    function loadSectionsTable() {
+      const sections = [
+        {id:0,name:'首页',slug:'home',type:'special'},
+        {id:1,name:'设计创作',slug:'design',type:'category'},
+        {id:2,name:'技术笔记',slug:'tech',type:'category'},
+        {id:3,name:'工具分享',slug:'tools',type:'category'},
+        {id:4,name:'问题记录',slug:'issues',type:'category'},
+        {id:5,name:'生活随笔',slug:'life',type:'category'},
+        {id:6,name:'关于我',slug:'about',type:'special'}
+      ];
+      
+      const total = sections.length;
+      const totalPages = Math.ceil(total / 10);
+      const start = (sectionsPage - 1) * 10;
+      const pageData = sections.slice(start, start + 10);
+      
+      document.getElementById('sectionsTableBody').innerHTML = pageData.map(s => {
+        const catCount = s.type === 'special' ? '-' : allCategories.filter(c => String(c.sectionId) === String(s.id)).length;
+        const typeBadge = s.type === 'special' 
+          ? '<span class="px-2 py-0.5 text-xs rounded-full bg-purple-500/20 text-purple-400">特殊</span>'
+          : '<span class="px-2 py-0.5 text-xs rounded-full bg-gray-500/20 text-gray-400">栏目</span>';
+        return `<tr class="post-row">
+          <td class="px-4 py-3"><span class="text-sm text-gray-400">${s.id}</span></td>
+          <td class="px-4 py-3"><span class="text-sm font-medium">${s.name}</span></td>
+          <td class="px-4 py-3"><span class="text-sm text-gray-400">${s.slug}</span></td>
+          <td class="px-4 py-3">${typeBadge}</td>
+          <td class="px-4 py-3">-</td>
+          <td class="px-4 py-3">-</td>
+          <td class="px-4 py-3"><span class="text-sm text-gray-400">${catCount}</span></td>
+          <td class="px-4 py-3 text-right"><button class="text-indigo-400 hover:text-indigo-300 text-sm mr-3">编辑</button><button class="text-red-400 hover:text-red-300 text-sm">删除</button></td>
+        </tr>`;
+      }).join('');
+      
+      document.getElementById('sectionsCurrentPage').textContent = sectionsPage;
+      document.getElementById('sectionsTotalPages').textContent = totalPages;
+      document.getElementById('sectionsTotal').textContent = total;
+      
+      let html = `<button onclick="changeSectionsPage(${sectionsPage-1})" ${sectionsPage===1?'disabled':''} class="pagination-btn">上一页</button>`;
+      for (let i = 1; i <= totalPages; i++) {
+        html += `<button onclick="changeSectionsPage(${i})" class="pagination-btn ${i===sectionsPage?'active':''}">${i}</button>`;
+      }
+      html += `<button onclick="changeSectionsPage(${sectionsPage+1})" ${sectionsPage===totalPages?'disabled':''} class="pagination-btn">下一页</button>`;
+      document.getElementById('sectionsPagination').innerHTML = html;
+    }
+    
+    function changeSectionsPage(p) {
+      const totalPages = Math.ceil(7 / 10);
+      if (p < 1 || p > totalPages) return;
+      sectionsPage = p;
+      loadSectionsTable();
+    }
+    
+    // 加载分类管理
+    function loadCategories(container) {
+      container.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold">分类管理</h2>
+          <button onclick="addCategory()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            新增分类
+          </button>
+        </div>
+        <div class="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-700/50">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">名称</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Slug</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">所属栏目</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">颜色</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">文章数</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">操作</th>
+              </tr>
+            </thead>
+            <tbody id="categoriesTableBody" class="divide-y divide-gray-700"></tbody>
+          </table>
+        </div>
+        <div class="flex items-center justify-between mt-4">
+          <div class="text-sm text-gray-500">
+            第 <span id="categoriesCurrentPage">1</span> / <span id="categoriesTotalPages">1</span> 页，共 <span id="categoriesTotal">0</span> 个
+          </div>
+          <div class="flex gap-2" id="categoriesPagination"></div>
+        </div>
+      `;
+      loadCategoriesTable();
+    }
+    
+    function loadCategoriesTable() {
+      const sections = {1:'设计创作',2:'技术笔记',3:'工具分享',4:'问题记录',5:'生活随笔'};
+      const token = localStorage.getItem('token');
+      
+      Promise.all([
+        fetch('/api/data/categories', {headers:{Authorization:`Bearer ${token}`}}).then(r => r.ok ? r.json() : []),
+        fetch('/api/data/posts', {headers:{Authorization:`Bearer ${token}`}}).then(r => r.ok ? r.json() : [])
+      ]).then(([categories, posts]) => {
+        allCategories = categories;
+        allPosts = posts;
+        
+        const total = categories.length;
+        const totalPages = Math.ceil(total / 10);
+        if (categoriesPage > totalPages) categoriesPage = totalPages || 1;
+        const start = (categoriesPage - 1) * 10;
+        const pageData = categories.slice(start, start + 10);
+        
+        document.getElementById('categoriesTableBody').innerHTML = pageData.map(c => {
+          const articleCount = posts.filter(p => String(p.categoryId) === String(c.id) || (p.categoryIds||[]).some(id => String(id) === String(c.id))).length;
+          return `<tr class="post-row">
+            <td class="px-4 py-3"><span class="text-sm">${c.name}</span></td>
+            <td class="px-4 py-3"><span class="text-sm text-gray-400">${c.slug}</span></td>
+            <td class="px-4 py-3"><span class="text-sm text-gray-400">${sections[c.sectionId]||'-'}</span></td>
+            <td class="px-4 py-3"><span class="w-4 h-4 rounded" style="background:${c.color};display:inline-block"></span></td>
+            <td class="px-4 py-3"><span class="text-sm text-gray-400">${articleCount}</span></td>
+            <td class="px-4 py-3 text-right"><button class="text-indigo-400 hover:text-indigo-300 text-sm mr-3">编辑</button><button class="text-red-400 hover:text-red-300 text-sm">删除</button></td>
+          </tr>`;
+        }).join('');
+        
+        document.getElementById('categoriesCurrentPage').textContent = categoriesPage;
+        document.getElementById('categoriesTotalPages').textContent = totalPages;
+        document.getElementById('categoriesTotal').textContent = total;
+        
+        let html = `<button onclick="changeCategoriesPage(${categoriesPage-1})" ${categoriesPage===1?'disabled':''} class="pagination-btn">上一页</button>`;
+        for (let i = 1; i <= totalPages; i++) {
+          if (i === 1 || i === totalPages || (i >= categoriesPage-1 && i <= categoriesPage+1)) {
+            html += `<button onclick="changeCategoriesPage(${i})" class="pagination-btn ${i===categoriesPage?'active':''}">${i}</button>`;
+          } else if (i === categoriesPage-2 || i === categoriesPage+2) {
+            html += `<span class="px-2 text-gray-500">...</span>`;
+          }
+        }
+        html += `<button onclick="changeCategoriesPage(${categoriesPage+1})" ${categoriesPage===totalPages?'disabled':''} class="pagination-btn">下一页</button>`;
+        document.getElementById('categoriesPagination').innerHTML = html;
+      });
+    }
+    
+    function changeCategoriesPage(p) {
+      const totalPages = Math.ceil(allCategories.length / 10);
+      if (p < 1 || p > totalPages) return;
+      categoriesPage = p;
+      loadCategoriesTable();
+    }
+    
+    // 加载标签管理
+    function loadTags(container) {
+      container.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold">标签管理</h2>
+          <button onclick="addTag()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            新增标签
+          </button>
+        </div>
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 mb-4">
+          <h3 class="text-sm font-bold mb-3">标签云</h3>
+          <div id="tagCloud" class="flex flex-wrap gap-2"></div>
+        </div>
+        <div class="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-700/50">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">名称</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Slug</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">颜色</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">使用次数</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">操作</th>
+              </tr>
+            </thead>
+            <tbody id="tagsTableBody" class="divide-y divide-gray-700"></tbody>
+          </table>
+        </div>
+        <div class="flex items-center justify-between mt-4">
+          <div class="text-sm text-gray-500">
+            第 <span id="tagsCurrentPage">1</span> / <span id="tagsTotalPages">1</span> 页，共 <span id="tagsTotal">0</span> 个
+          </div>
+          <div class="flex gap-2" id="tagsPagination"></div>
+        </div>
+      `;
+      loadTagsPage();
+    }
+    
+    function loadTagsPage() {
+      const token = localStorage.getItem('token');
+      fetch('/api/data/tags', {headers:{Authorization:`Bearer ${token}`}})
+        .then(r => r.ok ? r.json() : [])
+        .then(tags => {
+          allTags = tags;
+          
+          // 标签云
+          document.getElementById('tagCloud').innerHTML = tags.map(t => 
+            `<span class="px-3 py-1.5 bg-gray-700 hover:bg-indigo-600/20 border border-gray-600 hover:border-indigo-500 rounded-lg text-sm cursor-pointer transition-colors">${t.name}</span>`
+          ).join('');
+          
+          // 标签列表
+          const total = tags.length;
+          const totalPages = Math.ceil(total / 10);
+          if (tagsPage > totalPages) tagsPage = totalPages || 1;
+          const start = (tagsPage - 1) * 10;
+          const pageData = tags.slice(start, start + 10);
+          
+          document.getElementById('tagsTableBody').innerHTML = pageData.map(t => {
+            const usage = allPosts.filter(p => (p.tagIds||[]).includes(t.id)).length;
+            return `<tr class="post-row">
+              <td class="px-4 py-3"><span class="text-sm">${t.name}</span></td>
+              <td class="px-4 py-3"><span class="text-sm text-gray-400">${t.slug}</span></td>
+              <td class="px-4 py-3"><span class="w-4 h-4 rounded" style="background:${t.color||'#6366f1'};display:inline-block"></span></td>
+              <td class="px-4 py-3"><span class="text-sm text-gray-400">${usage}</span></td>
+              <td class="px-4 py-3 text-right"><button class="text-indigo-400 hover:text-indigo-300 text-sm mr-3">编辑</button><button class="text-red-400 hover:text-red-300 text-sm">删除</button></td>
+            </tr>`;
+          }).join('');
+          
+          document.getElementById('tagsCurrentPage').textContent = tagsPage;
+          document.getElementById('tagsTotalPages').textContent = totalPages;
+          document.getElementById('tagsTotal').textContent = total;
+          
+          let html = `<button onclick="changeTagsPage(${tagsPage-1})" ${tagsPage===1?'disabled':''} class="pagination-btn">上一页</button>`;
+          for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= tagsPage-1 && i <= tagsPage+1)) {
+              html += `<button onclick="changeTagsPage(${i})" class="pagination-btn ${i===tagsPage?'active':''}">${i}</button>`;
+            } else if (i === tagsPage-2 || i === tagsPage+2) {
+              html += `<span class="px-2 text-gray-500">...</span>`;
+            }
+          }
+          html += `<button onclick="changeTagsPage(${tagsPage+1})" ${tagsPage===totalPages?'disabled':''} class="pagination-btn">下一页</button>`;
+          document.getElementById('tagsPagination').innerHTML = html;
+        });
+    }
+    
+    function changeTagsPage(p) {
+      const totalPages = Math.ceil(allTags.length / 10);
+      if (p < 1 || p > totalPages) return;
+      tagsPage = p;
+      loadTagsPage();
+    }
+    
+    // 加载系统设置
+    function loadSettings(container) {
+      container.innerHTML = `
+        <h2 class="text-2xl font-bold mb-4">系统设置</h2>
+        <div class="space-y-4">
+          <div class="bg-gray-800 border border-gray-700 rounded-xl p-6">
+            <h3 class="text-base font-bold mb-4">站点信息</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs text-gray-400 mb-1">站点名称</label>
+                <input type="text" value="DevLog_" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-400 mb-1">作者</label>
+                <input type="text" value="文昌" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+              </div>
+              <div class="col-span-2">
+                <label class="block text-xs text-gray-400 mb-1">站点描述</label>
+                <input type="text" value="记录灵感 · 设计 · 代码" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-400 mb-1">联系邮箱</label>
+                <input type="email" value="admin@example.com" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+              </div>
+              <div>
+                <label class="block text-xs text-gray-400 mb-1">Markdown 主题</label>
+                <select class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                  <option value="default">default</option>
+                  <option value="github">github</option>
+                </select>
+              </div>
+            </div>
+            <div class="mt-4 flex gap-2">
+              <button onclick="saveSettings()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm">保存设置</button>
+              <button class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors text-sm">重置</button>
+            </div>
+          </div>
+          
+          <div class="bg-gray-800 border border-gray-700 rounded-xl p-6">
+            <h3 class="text-base font-bold mb-4">关于我</h3>
+            <div class="space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">姓名</label>
+                  <input type="text" value="文昌" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">副标题</label>
+                  <input type="text" value="记录灵感 · 设计 · 代码" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs text-gray-400 mb-1">个人简介</label>
+                <textarea rows="3" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">这里记录我在学习、实验与实践中的一些思考，内容主要围绕 Web 开发、效率工具、工程实践，以及日常工作中遇到的问题与解决方式。</textarea>
+              </div>
+              <div>
+                <label class="block text-xs text-gray-400 mb-1">技能栈（逗号分隔）</label>
+                <input type="text" value="TypeScript, Rust, React, Cloud Native" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+              </div>
+              <div class="grid grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">GitHub URL</label>
+                  <input type="url" value="https://github.com/xxx" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">星球 URL</label>
+                  <input type="url" value="" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">邮箱</label>
+                  <input type="email" value="admin@example.com" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-gray-800 border border-gray-700 rounded-xl p-6">
+            <h3 class="text-base font-bold mb-4">系统信息</h3>
+            <div class="grid grid-cols-3 gap-4 text-sm">
+              <div class="p-3 bg-gray-700/50 rounded-lg">
+                <div class="text-xs text-gray-500">Node 版本</div>
+                <div class="font-medium">v24.12.0</div>
+              </div>
+              <div class="p-3 bg-gray-700/50 rounded-lg">
+                <div class="text-xs text-gray-500">文章总数</div>
+                <div class="font-medium" id="settingsPostCount">0</div>
+              </div>
+              <div class="p-3 bg-gray-700/50 rounded-lg">
+                <div class="text-xs text-gray-500">数据目录</div>
+                <div class="font-medium">data/seed</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('settingsPostCount').textContent = allPosts.length;
+    }
+    
+    // 工具函数
+    function escapeHtml(t) { return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function createPost() { window.location.href = '/admin/editor.html'; }
+    function editPost(id) { window.location.href = '/admin/editor.html?id='+id; }
+    function addSection() { alert('新增栏目功能开发中...'); }
+    function addCategory() { alert('新增分类功能开发中...'); }
+    function addTag() { alert('新增标签功能开发中...'); }
+    function saveSettings() { alert('设置已保存！'); }
+    function logout() { localStorage.removeItem('token'); window.location.href = '/admin'; }
+    
+    // 初始化
+    initTheme();
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#themeMenu') && !e.target.closest('button[onclick*="theme"]')) {
+        document.getElementById('themeMenu').classList.add('hidden');
+      }
+    });
+    
+    // 加载默认页面
+    showPage('dashboard', document.querySelector('.sidebar-item'));
+  </script>
+</body>
+</html>

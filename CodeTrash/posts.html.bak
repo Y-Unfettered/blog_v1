@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>后台管理 - 文章管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+            dark: {
+              100: '#1e293b',
+              200: '#172033',
+              300: '#0f1115',
+              400: '#0a0c10',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    .gradient-bg {
+      background: linear-gradient(135deg, #0f1115 0%, #1e293b 100%);
+    }
+    .glass-effect {
+      background: rgba(17, 24, 39, 0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    @keyframes slide-up {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .animate-slide-up {
+      animation: slide-up 0.5s ease-out;
+    }
+    .post-card {
+      transition: all 0.3s ease;
+    }
+    .post-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 40px rgba(99, 102, 241, 0.1);
+    }
+    .status-badge {
+      transition: all 0.2s ease;
+    }
+    .status-badge:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body class="bg-[#0f1115] text-gray-300 min-h-screen">
+  <div id="app">
+    <header class="sticky top-0 z-50 bg-[#0f1115]/80 backdrop-blur-xl border-b border-gray-800">
+      <div class="flex items-center justify-between px-6 h-16">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+          </div>
+          <h1 class="text-xl font-bold text-white">DevLog 后台管理</h1>
+        </div>
+        <div class="flex items-center gap-4">
+          <span id="username" class="text-gray-400">管理员</span>
+          <button onclick="goBack()" class="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            返回
+          </button>
+          <button onclick="logout()" class="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            退出
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="flex min-h-[calc(100vh-64px)]">
+      <aside class="w-64 bg-[#0a0c10] border-r border-gray-800">
+        <nav class="py-4">
+          <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3" onclick="goToDashboard()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+            </svg>
+            <span>概览</span>
+          </div>
+          <div class="sidebar-item active px-6 py-3 cursor-pointer flex items-center gap-3">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <span>文章管理</span>
+          </div>
+          <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3" onclick="goToCategories()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+            </svg>
+            <span>分类管理</span>
+          </div>
+          <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3" onclick="goToTags()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+            </svg>
+            <span>标签管理</span>
+          </div>
+          <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3" onclick="goToSettings()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573 1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            <span>系统设置</span>
+          </div>
+        </nav>
+      </aside>
+
+      <main class="flex-1 p-8 overflow-y-auto">
+        <div class="animate-slide-up">
+          <div class="flex items-center justify-between mb-8">
+            <h2 class="text-2xl font-bold text-white">文章管理</h2>
+            <button onclick="createPost()" class="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all transform hover:scale-105">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+              新建文章
+            </button>
+          </div>
+
+          <div class="bg-[#111] border border-gray-800 rounded-xl p-6 mb-6">
+            <div class="flex flex-wrap items-center gap-4 mb-6">
+              <div class="flex-1 min-w-64">
+                <div class="relative">
+                  <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+                  <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="搜索文章标题、内容..."
+                    class="w-full pl-10 pr-4 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                    oninput="handleSearch()"
+                  />
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <select id="statusFilter" onchange="handleStatusFilter()" class="px-4 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 transition-all">
+                  <option value="">全部状态</option>
+                  <option value="published">已发布</option>
+                  <option value="draft">草稿</option>
+                </select>
+                <select id="categoryFilter" onchange="handleCategoryFilter()" class="px-4 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 transition-all">
+                  <option value="">全部分类</option>
+                </select>
+                <select id="sortBy" onchange="handleSort()" class="px-4 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 transition-all">
+                  <option value="date-desc">最新发布</option>
+                  <option value="date-asc">最早发布</option>
+                  <option value="title-asc">标题 A-Z</option>
+                  <option value="title-desc">标题 Z-A</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="postsContainer" class="space-y-4">
+            <div class="text-center py-12 text-gray-500">
+              <svg class="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              <p>加载中...</p>
+            </div>
+          </div>
+
+          <div id="pagination" class="flex justify-center items-center gap-2 mt-8 hidden">
+            <button id="prevPage" onclick="changePage(-1)" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7m0 0l7-7m7 7h18"></path>
+              </svg>
+            </button>
+            <span id="pageInfo" class="text-gray-400 text-sm">第 1 页</span>
+            <button id="nextPage" onclick="changePage(1)" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7m-7 7h18"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/admin';
+    }
+
+    let allPosts = [];
+    let filteredPosts = [];
+    let currentPage = 1;
+    const pageSize = 10;
+    let currentStatusFilter = '';
+    let currentCategoryFilter = '';
+    let currentSort = 'date-desc';
+    let searchQuery = '';
+    let categories = [];
+
+    function escapeHtml(input) {
+      return String(input || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function resolvePostDate(post) {
+      return post.created_at || post.createdAt || post.updated_at || post.updatedAt || '';
+    }
+
+    function resolvePostStatus(post) {
+      if (post.status === 'published' || post.published === true) return 'published';
+      return 'draft';
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return '-';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadCategories();
+      await loadPosts();
+    });
+
+    async function loadCategories() {
+      try {
+        const response = await fetch('/api/data/categories', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          categories = await response.json();
+          updateCategoryFilter();
+        }
+      } catch (error) {
+        console.error('Load categories failed:', error);
+      }
+    }
+
+    async function loadPosts() {
+      try {
+        const response = await fetch('/api/data/posts', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          allPosts = await response.json();
+          applyFilters();
+        }
+      } catch (error) {
+        console.error('Load posts failed:', error);
+        document.getElementById('postsContainer').innerHTML = `
+          <div class="text-center py-12 text-red-400">
+            <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p>加载文章失败，请稍后重试</p>
+          </div>
+        `;
+      }
+    }
+
+    function applyFilters() {
+      filteredPosts = allPosts.filter(post => {
+        const status = resolvePostStatus(post);
+        
+        if (currentStatusFilter && status !== currentStatusFilter) {
+          return false;
+        }
+
+        if (currentCategoryFilter) {
+          const postCategories = post.categories || post.categoryIds || [];
+          if (!postCategories.includes(currentCategoryFilter)) {
+            return false;
+          }
+        }
+
+        if (searchQuery) {
+          const query = searchQuery.toLowerCase();
+          const title = (post.title || '').toLowerCase();
+          const summary = (post.summary || post.excerpt || '').toLowerCase();
+          const content = (post.content || '').toLowerCase();
+          
+          if (!title.includes(query) && !summary.includes(query) && !content.includes(query)) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      filteredPosts.sort((a, b) => {
+        const dateA = new Date(resolvePostDate(a) || 0);
+        const dateB = new Date(resolvePostDate(b) || 0);
+        const titleA = (a.title || '').toLowerCase();
+        const titleB = (b.title || '').toLowerCase();
+
+        switch (currentSort) {
+          case 'date-desc':
+            return dateB - dateA;
+          case 'date-asc':
+            return dateA - dateB;
+          case 'title-asc':
+            return titleA.localeCompare(titleB);
+          case 'title-desc':
+            return titleB.localeCompare(titleA);
+          default:
+            return dateB - dateA;
+        }
+      });
+
+      renderPosts();
+    }
+
+    function renderPosts() {
+      const container = document.getElementById('postsContainer');
+      const pagination = document.getElementById('pagination');
+
+      if (filteredPosts.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12 text-gray-500">
+            <svg class="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <p>暂无文章</p>
+          </div>
+        `;
+        pagination.classList.add('hidden');
+        return;
+      }
+
+      const totalPages = Math.ceil(filteredPosts.length / pageSize);
+      const startIndex = (currentPage - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const pagePosts = filteredPosts.slice(startIndex, endIndex);
+
+      container.innerHTML = pagePosts.map(post => {
+        const status = resolvePostStatus(post);
+        const dateText = formatDate(resolvePostDate(post));
+        const categoryName = post.categories && post.categories.length > 0 
+          ? post.categories[0] 
+          : (post.categoryIds && post.categoryIds.length > 0 
+            ? getCategoryName(post.categoryIds[0]) 
+            : '未分类');
+
+        return `
+          <div class="post-card bg-[#111] border border-gray-800 rounded-xl overflow-hidden">
+            <div class="flex flex-col md:flex-row">
+              <div class="md:w-48 h-32 md:h-auto relative overflow-hidden">
+                ${post.cover 
+                  ? `<img src="${escapeHtml(post.cover)}" alt="${escapeHtml(post.title)}" class="w-full h-full object-cover" />`
+                  : `<div class="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                      <svg class="w-12 h-12 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                    </div>`
+                }
+                <div class="absolute top-3 left-3">
+                  <span class="status-badge px-2 py-1 text-xs font-bold rounded ${status === 'published' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}">
+                    ${status === 'published' ? '已发布' : '草稿'}
+                  </span>
+                </div>
+              </div>
+              <div class="flex-1 p-6 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m4 0h4l-4 4m0 0l4-4m0 4h4"></path>
+                    </svg>
+                    <span>${dateText}</span>
+                    ${categoryName ? `<span class="px-2 py-0.5 bg-indigo-500/20 text-indigo-400 rounded">${escapeHtml(categoryName)}</span>` : ''}
+                  </div>
+                  <h3 class="text-lg font-bold text-white mb-2 line-clamp-2">${escapeHtml(post.title)}</h3>
+                  <p class="text-sm text-gray-400 line-clamp-2">${escapeHtml(post.summary || post.excerpt || '暂无摘要')}</p>
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex gap-2">
+                    <button data-post-id="${escapeHtml(String(post.id || ''))}" onclick="editPost(this)" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors text-sm">
+                      编辑
+                    </button>
+                    <button data-post-id="${escapeHtml(String(post.id || ''))}" onclick="toggleStatus(this)" class="px-4 py-2 ${status === 'published' ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg transition-colors text-sm">
+                      ${status === 'published' ? '设为草稿' : '发布'}
+                    </button>
+                  </div>
+                  <button data-post-id="${escapeHtml(String(post.id || ''))}" onclick="deletePost(this)" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm">
+                    删除
+                  </button>
+                </div>
+              </div>
+            </div>
+        `;
+      }).join('');
+
+      if (totalPages > 1) {
+        pagination.classList.remove('hidden');
+        document.getElementById('pageInfo').textContent = `第 ${currentPage} / ${totalPages} 页`;
+        document.getElementById('prevPage').disabled = currentPage <= 1;
+        document.getElementById('nextPage').disabled = currentPage >= totalPages;
+      } else {
+        pagination.classList.add('hidden');
+      }
+    }
+
+    function getCategoryName(categoryId) {
+      const category = categories.find(c => c.id === categoryId);
+      return category ? category.name : categoryId;
+    }
+
+    function handleSearch() {
+      searchQuery = document.getElementById('searchInput').value.trim();
+      currentPage = 1;
+      applyFilters();
+    }
+
+    function handleStatusFilter() {
+      currentStatusFilter = document.getElementById('statusFilter').value;
+      currentPage = 1;
+      applyFilters();
+    }
+
+    function handleCategoryFilter() {
+      currentCategoryFilter = document.getElementById('categoryFilter').value;
+      currentPage = 1;
+      applyFilters();
+    }
+
+    function handleSort() {
+      currentSort = document.getElementById('sortBy').value;
+      currentPage = 1;
+      applyFilters();
+    }
+
+    function updateCategoryFilter() {
+      const select = document.getElementById('categoryFilter');
+      const currentValue = select.value;
+      select.innerHTML = '<option value="">全部分类</option>' + 
+        categories.map(cat => `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`).join('');
+      select.value = currentValue;
+    }
+
+    function changePage(delta) {
+      const totalPages = Math.ceil(filteredPosts.length / pageSize);
+      const newPage = currentPage + delta;
+      if (newPage >= 1 && newPage <= totalPages) {
+        currentPage = newPage;
+        renderPosts();
+      }
+    }
+
+    function createPost() {
+      window.location.href = '/admin/editor.html';
+    }
+
+    function editPost(button) {
+      const postId = button.getAttribute('data-post-id');
+      window.location.href = `/admin/editor.html?id=${encodeURIComponent(postId)}`;
+    }
+
+    async function toggleStatus(button) {
+      const postId = button.getAttribute('data-post-id');
+      if (!confirm('确定要更改文章状态吗？')) return;
+
+      try {
+        const post = allPosts.find(p => String(p.id) === postId);
+        if (!post) return;
+
+        const newStatus = post.status === 'published' || post.published === true ? 'draft' : 'published';
+        const updateData = {
+          status: newStatus,
+          published: newStatus === 'published'
+        };
+
+        const response = await fetch(`/api/data/posts/${postId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(updateData)
+        });
+
+        if (response.ok) {
+          await loadPosts();
+        } else {
+          alert('更新文章状态失败');
+        }
+      } catch (error) {
+        console.error('Toggle status failed:', error);
+        alert('更新文章状态失败');
+      }
+    }
+
+    async function deletePost(button) {
+      const postId = button.getAttribute('data-post-id');
+      if (!confirm('确定要删除这篇文章吗？此操作不可恢复！')) return;
+
+      try {
+        const response = await fetch(`/api/data/posts/${postId}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          await loadPosts();
+        } else {
+          alert('删除文章失败');
+        }
+      } catch (error) {
+        console.error('Delete post failed:', error);
+        alert('删除文章失败');
+      }
+    }
+
+    function goToDashboard() {
+      window.location.href = '/admin/dashboard.html';
+    }
+
+    function goToCategories() {
+      window.location.href = '/admin/categories.html';
+    }
+
+    function goToTags() {
+      window.location.href = '/admin/tags.html';
+    }
+
+    function goToSettings() {
+      window.location.href = '/admin/settings.html';
+    }
+
+    function goBack() {
+      window.location.href = '/admin/dashboard.html';
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = '/admin';
+    }
+  </script>
+</body>
+</html>

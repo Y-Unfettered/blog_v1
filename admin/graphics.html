@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevLog Graphic Management</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+            dark: {
+              bg: '#0a0a0a',
+              surface: '#111111',
+              border: '#1f1f1f',
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="/admin/admin-common.css">
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-[#0a0a0a] dark:text-gray-100">
+  <div id="admin-app"></div>
+
+  <script src="/admin/admin-common.js"></script>
+  <script>
+    if (!window.AdminApp || !AdminApp.requireAuth()) {
+      throw new Error('Missing admin auth context.');
+    }
+
+    const locale = AdminApp.getLocale();
+    const t = function translateText(value) {
+      return AdminApp.translate(value, locale);
+    };
+
+    const TEXT = {
+      title: { en: 'Graphic Management', zh: '图文管理' },
+      description: {
+        en: 'Create image-led notes with multiple images, short copy, section metadata, and draft/publish controls.',
+        zh: '集中上传图片、整理短内容，并维护栏目、分类、标签与草稿/发布状态。',
+      },
+      reload: { en: 'Reload', zh: '重新加载' },
+      create: { en: 'New Graphic Note', zh: '新建图文' },
+      imageEditor: { en: 'Image Editor', zh: '图片编辑' },
+      imageHelper: {
+        en: 'Upload up to 18 images. The first image is used as the cover by default.',
+        zh: '最多上传 18 张图片，第一张会默认作为封面使用。',
+      },
+      addImages: { en: 'Add Images', zh: '添加图片' },
+      coverImage: { en: 'Cover', zh: '封面' },
+      setAsCover: { en: 'Set as cover', zh: '设为封面' },
+      removeImage: { en: 'Remove', zh: '移除' },
+      composer: { en: 'Composer', zh: '内容编辑' },
+      composerHint: {
+        en: 'Use a clear title and concise copy. You can start from text first and polish later.',
+        zh: '先把标题和正文写清楚，后面再慢慢补图片与标签也可以。',
+      },
+      titleLabel: { en: 'Title', zh: '标题' },
+      titlePlaceholder: {
+        en: 'A clearer title usually performs better',
+        zh: '写一个更清晰的标题，通常会更容易后续整理和展示',
+      },
+      contentPlaceholder: {
+        en: 'Write the main copy here. This area is intentionally focused on lightweight image-and-text notes.',
+        zh: '在这里输入正文描述，适合写轻量的图文记录、创作说明或阶段复盘。',
+      },
+      contentLength: { en: 'Content length', zh: '正文长度' },
+      topics: { en: 'Topics', zh: '话题' },
+      selectedTopics: { en: 'Selected Topics', zh: '已选话题' },
+      topicPlaceholder: { en: 'Add a custom topic', zh: '添加自定义话题' },
+      addTopic: { en: 'Add Topic', zh: '添加话题' },
+      metadata: { en: 'Metadata', zh: '元数据' },
+      section: { en: 'Section', zh: '栏目' },
+      category: { en: 'Category', zh: '分类' },
+      status: { en: 'Status', zh: '状态' },
+      tags: { en: 'Tags', zh: '标签' },
+      draft: { en: 'Draft', zh: '草稿' },
+      published: { en: 'Published', zh: '已发布' },
+      emptyCategory: { en: 'Select category', zh: '请选择分类' },
+      noTagSuggestions: { en: 'No tags available.', zh: '当前没有可选标签。' },
+      actionBar: { en: 'Actions', zh: '操作' },
+      saveDraft: { en: 'Save Draft', zh: '保存草稿' },
+      publish: { en: 'Publish', zh: '发布图文' },
+      update: { en: 'Update Published', zh: '更新已发布内容' },
+      resetForm: { en: 'Reset', zh: '重置表单' },
+      listTitle: { en: 'Saved Graphic Notes', zh: '已存图文' },
+      listHint: { en: 'Click an item to continue editing.', zh: '点击右侧条目即可继续编辑已有图文。' },
+      search: { en: 'Search', zh: '搜索' },
+      searchPlaceholder: { en: 'Search title, content, or topics', zh: '按标题、正文或话题搜索' },
+      allStatuses: { en: 'All statuses', zh: '全部状态' },
+      allSections: { en: 'All sections', zh: '全部栏目' },
+      itemCount: { en: 'Items', zh: '条' },
+      noItems: { en: 'No graphic notes match the current filters.', zh: '当前筛选条件下没有图文内容。' },
+      imageCount: { en: 'Images', zh: '图片数' },
+      edit: { en: 'Edit', zh: '编辑' },
+      delete: { en: 'Delete', zh: '删除' },
+      loading: { en: 'Loading graphic notes...', zh: '正在加载图文数据...' },
+      loaded: { en: 'Graphic notes loaded.', zh: '图文数据已加载。' },
+      loadFailed: { en: 'Failed to load graphic notes: ', zh: '加载图文数据失败：' },
+      savingDraft: { en: 'Saving draft...', zh: '正在保存草稿...' },
+      publishing: { en: 'Publishing graphic note...', zh: '正在发布图文...' },
+      draftSaved: { en: 'Graphic note draft saved.', zh: '图文草稿已保存。' },
+      publishedSaved: { en: 'Graphic note published.', zh: '图文已发布。' },
+      saveFailed: { en: 'Failed to save graphic note: ', zh: '保存图文失败：' },
+      deleting: { en: 'Deleting graphic note...', zh: '正在删除图文...' },
+      deleted: { en: 'Graphic note deleted.', zh: '图文已删除。' },
+      deleteFailed: { en: 'Failed to delete graphic note: ', zh: '删除图文失败：' },
+      deleteConfirm: { en: 'Delete this graphic note?', zh: '确认删除这条图文吗？' },
+      emptyDraft: { en: 'Add at least a title, some copy, or one image before saving.', zh: '至少填写标题、正文，或者上传一张图片后再保存。' },
+      publishNeedsImage: { en: 'At least one image is required before publishing.', zh: '发布前至少需要上传一张图片。' },
+      publishNeedsSection: { en: 'Please choose a section before publishing.', zh: '发布前请先选择栏目。' },
+      publishNeedsCategory: { en: 'Please choose a category before publishing.', zh: '发布前请先选择分类。' },
+      imageReadFailed: { en: 'Failed to read image files.', zh: '读取图片文件失败。' },
+      maxImagesHint: { en: 'You can upload up to 18 images in one note.', zh: '单条图文最多保留 18 张图片。' },
+      editingExisting: { en: 'Editing existing graphic note', zh: '正在编辑已有图文' },
+      newDraft: { en: 'New graphic draft', zh: '新建图文草稿' },
+      latestUpdated: { en: 'Latest updated', zh: '最近更新' },
+      contentEmpty: { en: 'No content yet.', zh: '还没有正文内容。' },
+      untitled: { en: 'Untitled graphic note', zh: '未命名图文' },
+      sectionUnassigned: { en: 'Unassigned section', zh: '未分配栏目' },
+      categoryUnassigned: { en: 'Unassigned category', zh: '未分配分类' },
+      suggestionHint: { en: 'Suggested topics', zh: '建议话题' },
+      imageSlot: { en: 'Image', zh: '图片' },
+    };
+
+    const layout = AdminApp.mountPage({
+      active: 'graphics',
+      title: TEXT.title,
+      description: TEXT.description,
+      actions: [
+        {
+          id: 'reload-graphics-btn',
+          label: TEXT.reload,
+          className: 'rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800',
+        },
+        {
+          id: 'new-graphic-btn',
+          label: TEXT.create,
+          className: 'rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-colors hover:bg-indigo-700',
+        },
+      ],
+    });
+
+    layout.content.innerHTML = `
+      <div class="grid gap-6 2xl:grid-cols-[minmax(0,1.45fr)_380px]">
+        <div class="grid gap-6">
+          <section id="graphic-form-section" class="admin-panel overflow-hidden p-6 hidden">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div class="admin-kicker text-gray-500 dark:text-gray-400">${t(TEXT.imageEditor)}</div>
+                <h2 class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">${t(TEXT.imageEditor)}</h2>
+                <p class="mt-2 max-w-2xl text-sm text-gray-500 dark:text-gray-400">${t(TEXT.imageHelper)}</p>
+              </div>
+              <div class="rounded-full bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                <span id="graphic-image-count">0</span>/18
+              </div>
+            </div>
+            <input id="graphic-image-input" type="file" accept="image/*" multiple class="hidden">
+            <div id="graphic-image-grid" class="mt-6 flex flex-wrap gap-4"></div>
+            <div class="mt-4 text-xs text-gray-500 dark:text-gray-400">${t(TEXT.maxImagesHint)}</div>
+          </section>
+
+          <section id="graphic-editor-section" class="admin-panel p-6 hidden">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div id="graphic-form-status" class="admin-kicker text-gray-500 dark:text-gray-400">${t(TEXT.newDraft)}</div>
+                <h2 class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">${t(TEXT.composer)}</h2>
+                <p class="mt-2 max-w-2xl text-sm text-gray-500 dark:text-gray-400">${t(TEXT.composerHint)}</p>
+              </div>
+              <div class="rounded-2xl bg-gray-50 px-4 py-3 text-right dark:bg-gray-800/70">
+                <div class="text-xs uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">${t(TEXT.contentLength)}</div>
+                <div id="graphic-content-count" class="mt-1 text-lg font-semibold text-gray-900 dark:text-white">0/1000</div>
+              </div>
+            </div>
+
+            <div class="mt-6 space-y-5">
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="graphic-title">${t(TEXT.titleLabel)}</label>
+                <input id="graphic-title" class="input-control" type="text" maxlength="60" placeholder="${AdminApp.escapeHtml(t(TEXT.titlePlaceholder))}">
+              </div>
+
+              <div>
+                <textarea id="graphic-content" class="textarea-control min-h-[280px]" rows="12" maxlength="1000" placeholder="${AdminApp.escapeHtml(t(TEXT.contentPlaceholder))}"></textarea>
+              </div>
+
+              <div class="rounded-[1.4rem] bg-gray-50 p-5 dark:bg-[#171717]">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div class="text-sm font-semibold text-gray-900 dark:text-white">${t(TEXT.topics)}</div>
+                    <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">${t(TEXT.suggestionHint)}</div>
+                  </div>
+                  <div class="flex w-full max-w-sm gap-2">
+                    <input id="graphic-topic-input" class="input-control" type="text" maxlength="20" placeholder="${AdminApp.escapeHtml(t(TEXT.topicPlaceholder))}">
+                    <button id="graphic-add-topic-btn" type="button" class="rounded-xl bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">${t(TEXT.addTopic)}</button>
+                  </div>
+                </div>
+                <div id="graphic-topic-suggestions" class="mt-4 flex flex-wrap gap-2"></div>
+                <div class="mt-5 border-t border-gray-200 pt-4 dark:border-gray-800">
+                  <div class="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">${t(TEXT.selectedTopics)}</div>
+                  <div id="graphic-selected-topics" class="flex flex-wrap gap-2"></div>
+                </div>
+              </div>
+
+              <div class="grid gap-4 xl:grid-cols-3">
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="graphic-section-select">${t(TEXT.section)}</label>
+                  <select id="graphic-section-select" class="select-control"></select>
+                </div>
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="graphic-category-select">${t(TEXT.category)}</label>
+                  <select id="graphic-category-select" class="select-control"></select>
+                </div>
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="graphic-status-select">${t(TEXT.status)}</label>
+                  <select id="graphic-status-select" class="select-control">
+                    <option value="draft">${t(TEXT.draft)}</option>
+                    <option value="published">${t(TEXT.published)}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="rounded-[1.4rem] bg-gray-50 p-5 dark:bg-[#171717]">
+                <div class="text-sm font-semibold text-gray-900 dark:text-white">${t(TEXT.tags)}</div>
+                <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">${t(TEXT.metadata)}</div>
+                <div id="graphic-tag-options" class="mt-4 flex flex-wrap gap-2"></div>
+              </div>
+
+              <div class="rounded-[1.4rem] bg-gray-50 p-5 dark:bg-[#171717]">
+                <div class="mb-4 text-sm font-semibold text-gray-900 dark:text-white">${t(TEXT.actionBar)}</div>
+                <div class="flex flex-wrap gap-3">
+                  <button id="graphic-save-draft-btn" type="button" class="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">${t(TEXT.saveDraft)}</button>
+                  <button id="graphic-publish-btn" type="button" class="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-colors hover:bg-indigo-700">${t(TEXT.publish)}</button>
+                  <button id="graphic-reset-btn" type="button" class="rounded-xl border border-transparent px-4 py-2.5 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800">${t(TEXT.resetForm)}</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="grid gap-6">
+          <section class="admin-panel p-5">
+            <div class="admin-kicker text-gray-500 dark:text-gray-400">${t(TEXT.listTitle)}</div>
+            <h2 class="mt-1 text-lg font-semibold text-gray-900 dark:text-white">${t(TEXT.listTitle)}</h2>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">${t(TEXT.listHint)}</p>
+
+            <div class="mt-5 space-y-4">
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="graphic-search-input">${t(TEXT.search)}</label>
+                <input id="graphic-search-input" class="input-control" type="search" placeholder="${AdminApp.escapeHtml(t(TEXT.searchPlaceholder))}">
+              </div>
+              <div class="grid gap-4 sm:grid-cols-2 2xl:grid-cols-1">
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="graphic-filter-status">${t(TEXT.status)}</label>
+                  <select id="graphic-filter-status" class="select-control">
+                    <option value="all">${t(TEXT.allStatuses)}</option>
+                    <option value="draft">${t(TEXT.draft)}</option>
+                    <option value="published">${t(TEXT.published)}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="graphic-filter-section">${t(TEXT.section)}</label>
+                  <select id="graphic-filter-section" class="select-control"></select>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="admin-panel p-5">
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <div class="text-sm font-semibold text-gray-900 dark:text-white">${t(TEXT.latestUpdated)}</div>
+              <div class="text-sm text-gray-500 dark:text-gray-400"><span id="graphic-item-count">0</span> ${t(TEXT.itemCount)}</div>
+            </div>
+            <div id="graphic-item-list" class="grid gap-3"></div>
+          </section>
+        </aside>
+      </div>
+    `;
+
+    const state = {
+      items: [],
+      sections: [],
+      categories: [],
+      tags: [],
+      editingId: '',
+      images: [],
+      topics: [],
+      tagIds: [],
+      search: '',
+      statusFilter: 'all',
+      sectionFilter: '',
+      unsubscribe: null,
+    };
+
+    const elements = {
+      imageInput: document.getElementById('graphic-image-input'),
+      imageGrid: document.getElementById('graphic-image-grid'),
+      imageCount: document.getElementById('graphic-image-count'),
+      formStatus: document.getElementById('graphic-form-status'),
+      titleInput: document.getElementById('graphic-title'),
+      contentInput: document.getElementById('graphic-content'),
+      contentCount: document.getElementById('graphic-content-count'),
+      topicInput: document.getElementById('graphic-topic-input'),
+      suggestionList: document.getElementById('graphic-topic-suggestions'),
+      selectedTopics: document.getElementById('graphic-selected-topics'),
+      sectionSelect: document.getElementById('graphic-section-select'),
+      categorySelect: document.getElementById('graphic-category-select'),
+      statusSelect: document.getElementById('graphic-status-select'),
+      tagOptions: document.getElementById('graphic-tag-options'),
+      saveDraftButton: document.getElementById('graphic-save-draft-btn'),
+      publishButton: document.getElementById('graphic-publish-btn'),
+      resetButton: document.getElementById('graphic-reset-btn'),
+      searchInput: document.getElementById('graphic-search-input'),
+      filterStatusSelect: document.getElementById('graphic-filter-status'),
+      filterSectionSelect: document.getElementById('graphic-filter-section'),
+      itemCount: document.getElementById('graphic-item-count'),
+      itemList: document.getElementById('graphic-item-list'),
+    };
+
+    function parseIdList(value) {
+      if (Array.isArray(value)) {
+        return value.map(function normalize(item) {
+          return String(item || '').trim();
+        }).filter(Boolean);
+      }
+      if (value === undefined || value === null || value === '') {
+        return [];
+      }
+      return String(value).split(',').map(function normalize(item) {
+        return item.trim();
+      }).filter(Boolean);
+    }
+
+    function parseTopicList(value) {
+      const seen = new Set();
+      return parseIdList(value).map(function normalize(item) {
+        return item.startsWith('#') ? item : ('#' + item);
+      }).filter(function unique(item) {
+        if (seen.has(item)) {
+          return false;
+        }
+        seen.add(item);
+        return true;
+      });
+    }
+
+    function compareByOrderAndName(left, right) {
+      const orderDiff = (Number(left && left.order) || 0) - (Number(right && right.order) || 0);
+      if (orderDiff !== 0) {
+        return orderDiff;
+      }
+      return String((left && (left.name || left.label || left.id)) || '').localeCompare(
+        String((right && (right.name || right.label || right.id)) || ''),
+        'zh-CN',
+      );
+    }
+
+    function normalizeGraphicItem(item) {
+      const images = Array.isArray(item && item.images)
+        ? item.images.map(function normalizeImage(entry) {
+          return String(entry || '').trim();
+        }).filter(Boolean)
+        : [];
+      const cover = String((item && item.cover) || images[0] || '').trim();
+      if (!images.length && cover) {
+        images.push(cover);
+      }
+      return {
+        id: String(item && item.id || '').trim(),
+        title: String(item && item.title || '').trim(),
+        content: String(item && (item.content || item.body) || '').trim(),
+        summary: String(item && item.summary || '').trim(),
+        cover: cover,
+        images: images,
+        topics: parseTopicList(item && item.topics),
+        sectionId: String(item && item.sectionId || '').trim(),
+        categoryId: String(item && item.categoryId || '').trim(),
+        tagIds: parseIdList(item && (item.tagIds !== undefined ? item.tagIds : item.tags)),
+        status: String(item && item.status || (item && item.published ? 'published' : 'draft')).trim() === 'published' ? 'published' : 'draft',
+        published: Boolean(item && (item.published || item.status === 'published')),
+        createdAt: item && (item.createdAt || item.created_at) || '',
+        updatedAt: item && (item.updatedAt || item.updated_at) || '',
+      };
+    }
+
+    function getSectionName(sectionId) {
+      const section = state.sections.find(function matchSection(item) {
+        return String(item && item.id) === String(sectionId || '');
+      });
+      return section ? String(section.name || section.label || section.id) : t(TEXT.sectionUnassigned);
+    }
+
+    function getCategoryName(categoryId) {
+      const category = state.categories.find(function matchCategory(item) {
+        return String(item && item.id) === String(categoryId || '');
+      });
+      return category ? String(category.name || category.label || category.id) : t(TEXT.categoryUnassigned);
+    }
+
+    function getAvailableCategories(sectionId) {
+      return state.categories
+        .filter(function filterCategory(item) {
+          if (!sectionId) {
+            return true;
+          }
+          return String(item && item.sectionId || '') === String(sectionId);
+        })
+        .slice()
+        .sort(compareByOrderAndName);
+    }
+
+    function buildTopicSuggestions() {
+      const suggestions = [];
+      const seen = new Set();
+
+      function pushTopic(label) {
+        const normalized = String(label || '').trim();
+        if (!normalized) {
+          return;
+        }
+        const topic = normalized.startsWith('#') ? normalized : ('#' + normalized);
+        if (seen.has(topic) || state.topics.includes(topic)) {
+          return;
+        }
+        seen.add(topic);
+        suggestions.push(topic);
+      }
+
+      const activeSection = state.sections.find(function matchSection(item) {
+        return String(item && item.id) === String(elements.sectionSelect.value || '');
+      });
+      const activeCategory = state.categories.find(function matchCategory(item) {
+        return String(item && item.id) === String(elements.categorySelect.value || '');
+      });
+
+      pushTopic(activeSection && activeSection.name);
+      pushTopic(activeCategory && activeCategory.name);
+
+      getAvailableCategories(elements.sectionSelect.value).slice(0, 8).forEach(function eachCategory(category) {
+        pushTopic(category.name || category.label || category.id);
+      });
+
+      state.tags.slice(0, 8).forEach(function eachTag(tag) {
+        pushTopic(tag.name || tag.label || tag.id);
+      });
+
+      ['创作过程', '阶段记录', '灵感收集', '设计说明', '细节复盘', '项目快照'].forEach(pushTopic);
+      return suggestions.slice(0, 12);
+    }
+
+    function syncContentCount() {
+      const length = String(elements.contentInput.value || '').length;
+      elements.contentCount.textContent = length + '/1000';
+    }
+
+    function renderImageGrid() {
+      const cards = state.images.map(function renderImage(src, index) {
+        const isCover = index === 0;
+        return `
+          <article class="relative h-28 w-28 overflow-hidden rounded-[1.1rem] border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#181818]">
+            <img src="${AdminApp.escapeHtml(src)}" alt="${AdminApp.escapeHtml(t(TEXT.imageSlot))} ${index + 1}" class="h-full w-full object-cover">
+            <div class="absolute inset-x-2 top-2 flex items-center justify-between gap-2">
+              <span class="rounded-full bg-black/60 px-2 py-1 text-[11px] font-semibold text-white">${isCover ? AdminApp.escapeHtml(t(TEXT.coverImage)) : String(index + 1)}</span>
+              <button type="button" data-remove-image="${index}" class="rounded-full bg-black/60 px-2 py-1 text-[11px] font-medium text-white hover:bg-black/75">${AdminApp.escapeHtml(t(TEXT.removeImage))}</button>
+            </div>
+            ${isCover ? '' : `<button type="button" data-cover-image="${index}" class="absolute inset-x-2 bottom-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium text-gray-700 shadow-sm hover:bg-white">${AdminApp.escapeHtml(t(TEXT.setAsCover))}</button>`}
+          </article>
+        `;
+      }).join('');
+
+      elements.imageGrid.innerHTML = `
+        <button id="graphic-image-trigger" type="button" class="flex h-28 w-28 flex-col items-center justify-center rounded-[1.1rem] border border-dashed border-gray-300 bg-gray-50 text-gray-500 transition-colors hover:border-indigo-400 hover:text-indigo-500 dark:border-gray-700 dark:bg-[#171717] dark:text-gray-400 dark:hover:border-indigo-500 dark:hover:text-indigo-300">
+          <span class="text-3xl leading-none">+</span>
+          <span class="mt-2 text-xs font-medium">${AdminApp.escapeHtml(t(TEXT.addImages))}</span>
+        </button>
+        ${cards}
+      `;
+
+      elements.imageCount.textContent = String(state.images.length);
+      const trigger = document.getElementById('graphic-image-trigger');
+      if (trigger) {
+        trigger.addEventListener('click', function openPicker() {
+          elements.imageInput.click();
+        });
+      }
+    }
+
+    function renderSelectedTopics() {
+      if (!state.topics.length) {
+        elements.selectedTopics.innerHTML = '<div class="rounded-full bg-white px-3 py-2 text-sm text-gray-500 dark:bg-gray-800 dark:text-gray-400">#灵感记录</div>';
+        return;
+      }
+
+      elements.selectedTopics.innerHTML = state.topics.map(function renderTopic(topic, index) {
+        return `
+          <button type="button" data-remove-topic="${index}" class="inline-flex items-center gap-2 rounded-full bg-gray-900 px-3 py-2 text-sm font-medium text-white dark:bg-white dark:text-gray-900">
+            <span>${AdminApp.escapeHtml(topic)}</span>
+            <span class="text-xs opacity-70">×</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function renderTopicSuggestions() {
+      const suggestions = buildTopicSuggestions();
+      if (!suggestions.length) {
+        elements.suggestionList.innerHTML = '';
+        return;
+      }
+      elements.suggestionList.innerHTML = suggestions.map(function renderSuggestion(topic) {
+        return '<button type="button" data-add-topic="' + AdminApp.escapeHtml(topic) + '" class="rounded-full bg-white px-3 py-2 text-sm text-gray-600 shadow-sm transition-colors hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">' + AdminApp.escapeHtml(topic) + '</button>';
+      }).join('');
+    }
+
+    function renderTagOptions() {
+      if (!state.tags.length) {
+        elements.tagOptions.innerHTML = '<div class="text-sm text-gray-500 dark:text-gray-400">' + AdminApp.escapeHtml(t(TEXT.noTagSuggestions)) + '</div>';
+        return;
+      }
+
+      elements.tagOptions.innerHTML = state.tags.slice().sort(compareByOrderAndName).map(function renderTag(tag) {
+        const tagId = String(tag.id || '').trim();
+        const active = state.tagIds.includes(tagId);
+        return `
+          <button
+            type="button"
+            data-tag-id="${AdminApp.escapeHtml(tagId)}"
+            class="rounded-full border px-3 py-2 text-sm font-medium transition-colors ${active
+              ? 'border-indigo-500 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300'
+              : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'}"
+          >
+            ${AdminApp.escapeHtml(tag.name || tag.label || tag.id)}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function renderCategoryOptions() {
+      const currentSectionId = String(elements.sectionSelect.value || '').trim();
+      const categories = getAvailableCategories(currentSectionId);
+      const previousValue = String(elements.categorySelect.value || '').trim();
+
+      elements.categorySelect.innerHTML = '<option value="">' + AdminApp.escapeHtml(t(TEXT.emptyCategory)) + '</option>' +
+        categories.map(function renderCategory(category) {
+          return '<option value="' + AdminApp.escapeHtml(category.id) + '">' + AdminApp.escapeHtml(category.name || category.label || category.id) + '</option>';
+        }).join('');
+
+      if (categories.some(function hasPrevious(item) { return String(item.id) === previousValue; })) {
+        elements.categorySelect.value = previousValue;
+      } else if (categories.length) {
+        elements.categorySelect.value = categories[0].id;
+      } else {
+        elements.categorySelect.value = '';
+      }
+    }
+
+    function renderFilterOptions() {
+      const sectionOptions = state.sections.slice().sort(compareByOrderAndName).map(function renderSection(section) {
+        return '<option value="' + AdminApp.escapeHtml(section.id) + '">' + AdminApp.escapeHtml(section.name || section.label || section.id) + '</option>';
+      }).join('');
+
+      elements.sectionSelect.innerHTML = sectionOptions;
+      if (!elements.sectionSelect.value && state.sections.length) {
+        elements.sectionSelect.value = state.sections[0].id;
+      }
+
+      elements.filterSectionSelect.innerHTML = '<option value="">' + AdminApp.escapeHtml(t(TEXT.allSections)) + '</option>' + sectionOptions;
+      elements.filterSectionSelect.value = state.sectionFilter;
+      renderCategoryOptions();
+    }
+
+    function getFilteredItems() {
+      const keyword = state.search.trim().toLowerCase();
+      return state.items.filter(function filterStatus(item) {
+        if (state.statusFilter !== 'all' && item.status !== state.statusFilter) {
+          return false;
+        }
+        if (state.sectionFilter && String(item.sectionId || '') !== state.sectionFilter) {
+          return false;
+        }
+        if (!keyword) {
+          return true;
+        }
+        const haystack = [item.title, item.content, item.summary, item.topics.join(' ')].join('\n').toLowerCase();
+        return haystack.includes(keyword);
+      }).slice().sort(function sortByUpdate(left, right) {
+        return new Date(right.updatedAt || 0).getTime() - new Date(left.updatedAt || 0).getTime();
+      });
+    }
+
+    function renderItemList() {
+      const items = getFilteredItems();
+      elements.itemCount.textContent = String(items.length);
+
+      if (!items.length) {
+        elements.itemList.innerHTML = '<div class="rounded-2xl bg-gray-50 px-4 py-5 text-sm text-gray-500 dark:bg-gray-800/70 dark:text-gray-400">' + AdminApp.escapeHtml(t(TEXT.noItems)) + '</div>';
+        return;
+      }
+
+      elements.itemList.innerHTML = items.map(function renderItem(item) {
+        const coverHtml = item.cover
+          ? '<img src="' + AdminApp.escapeHtml(item.cover) + '" alt="' + AdminApp.escapeHtml(item.title || t(TEXT.untitled)) + '" class="h-20 w-20 rounded-2xl object-cover">'
+          : '<div class="flex h-20 w-20 items-center justify-center rounded-2xl bg-gray-100 text-xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">' + AdminApp.escapeHtml(t(TEXT.imageSlot)) + '</div>';
+        const summary = item.summary || item.content || t(TEXT.contentEmpty);
+        const statusClass = item.status === 'published'
+          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
+          : 'bg-amber-500/10 text-amber-600 dark:text-amber-300';
+
+        return `
+          <article class="rounded-[1.4rem] border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-gray-800 dark:bg-[#151515]">
+            <div class="flex gap-4">
+              ${coverHtml}
+              <div class="min-w-0 flex-1">
+                <div class="min-w-0">
+                  <div class="truncate text-base font-semibold text-gray-900 dark:text-white">${AdminApp.escapeHtml(item.title || t(TEXT.untitled))}</div>
+                  <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <span class="rounded-full px-2 py-1 ${statusClass}">${AdminApp.escapeHtml(item.status === 'published' ? t(TEXT.published) : t(TEXT.draft))}</span>
+                    <span>${AdminApp.escapeHtml(getSectionName(item.sectionId))}</span>
+                    <span>·</span>
+                    <span>${AdminApp.escapeHtml(getCategoryName(item.categoryId))}</span>
+                  </div>
+                </div>
+                <p class="mt-3 text-sm leading-6 text-gray-500 dark:text-gray-400">${AdminApp.escapeHtml(summary.slice(0, 78))}</p>
+                <div class="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
+                  <div>${AdminApp.escapeHtml(t(TEXT.imageCount))}: ${item.images.length}</div>
+                  <div>${AdminApp.formatDateTime(item.updatedAt)}</div>
+                </div>
+                <div class="mt-4 flex flex-wrap gap-2">
+                  <button type="button" data-edit-item="${AdminApp.escapeHtml(item.id)}" class="rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">${AdminApp.escapeHtml(t(TEXT.edit))}</button>
+                  <button type="button" data-delete-item="${AdminApp.escapeHtml(item.id)}" class="rounded-xl border border-rose-200 px-3 py-2 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:border-rose-900/60 dark:text-rose-300 dark:hover:bg-rose-950/30">${AdminApp.escapeHtml(t(TEXT.delete))}</button>
+                </div>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function syncPublishButtonLabel() {
+      elements.publishButton.textContent = state.editingId && elements.statusSelect.value === 'published'
+        ? t(TEXT.update)
+        : t(TEXT.publish);
+    }
+
+    function resetForm() {
+      state.editingId = '';
+      state.images = [];
+      state.topics = [];
+      state.tagIds = [];
+      elements.titleInput.value = '';
+      elements.contentInput.value = '';
+      elements.statusSelect.value = 'draft';
+      renderFilterOptions();
+      renderTagOptions();
+      renderImageGrid();
+      renderSelectedTopics();
+      renderTopicSuggestions();
+      elements.topicInput.value = '';
+      elements.formStatus.textContent = t(TEXT.newDraft);
+      syncContentCount();
+      syncPublishButtonLabel();
+    }
+
+    function applyItemToForm(itemId) {
+      const item = state.items.find(function matchItem(entry) {
+        return String(entry.id) === String(itemId || '');
+      });
+      if (!item) {
+        return;
+      }
+
+      document.getElementById('graphic-form-section').classList.remove('hidden');
+      document.getElementById('graphic-editor-section').classList.remove('hidden');
+      
+      state.editingId = item.id;
+      state.images = item.images.slice();
+      state.topics = item.topics.slice();
+      state.tagIds = item.tagIds.slice();
+      elements.titleInput.value = item.title || '';
+      elements.contentInput.value = item.content || '';
+      elements.statusSelect.value = item.status || 'draft';
+      renderFilterOptions();
+      elements.sectionSelect.value = item.sectionId || elements.sectionSelect.value;
+      renderCategoryOptions();
+      elements.categorySelect.value = item.categoryId || elements.categorySelect.value;
+      renderImageGrid();
+      renderSelectedTopics();
+      renderTopicSuggestions();
+      renderTagOptions();
+      elements.formStatus.textContent = t(TEXT.editingExisting);
+      syncContentCount();
+      syncPublishButtonLabel();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function readFilesAsDataUrls(fileList) {
+      const files = Array.from(fileList || []).slice(0, Math.max(0, 18 - state.images.length));
+      return Promise.all(files.map(function readSingleFile(file) {
+        return new Promise(function read(resolve, reject) {
+          const reader = new FileReader();
+          reader.onload = function onLoad(event) {
+            resolve(String(event.target && event.target.result || ''));
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }));
+    }
+
+    function addTopic(rawValue) {
+      const normalized = String(rawValue || '').trim();
+      if (!normalized) {
+        return;
+      }
+      const topic = normalized.startsWith('#') ? normalized : ('#' + normalized);
+      if (state.topics.includes(topic)) {
+        return;
+      }
+      state.topics.push(topic);
+      renderSelectedTopics();
+      renderTopicSuggestions();
+    }
+
+    function buildPayload(targetStatus) {
+      return {
+        title: String(elements.titleInput.value || '').trim(),
+        content: String(elements.contentInput.value || '').trim(),
+        summary: String(elements.contentInput.value || '').trim().slice(0, 120),
+        images: state.images.slice(),
+        cover: state.images[0] || '',
+        topics: state.topics.slice(),
+        sectionId: String(elements.sectionSelect.value || '').trim(),
+        categoryId: String(elements.categorySelect.value || '').trim(),
+        tagIds: state.tagIds.slice(),
+        status: targetStatus,
+        published: targetStatus === 'published',
+      };
+    }
+
+    function validateBeforeSave(status) {
+      const title = String(elements.titleInput.value || '').trim();
+      const content = String(elements.contentInput.value || '').trim();
+      const hasImage = state.images.length > 0;
+
+      if (!title && !content && !hasImage) {
+        throw new Error(t(TEXT.emptyDraft));
+      }
+      if (status === 'published' && !hasImage) {
+        throw new Error(t(TEXT.publishNeedsImage));
+      }
+      if (status === 'published' && !String(elements.sectionSelect.value || '').trim()) {
+        throw new Error(t(TEXT.publishNeedsSection));
+      }
+      if (status === 'published' && !String(elements.categorySelect.value || '').trim()) {
+        throw new Error(t(TEXT.publishNeedsCategory));
+      }
+    }
+
+    async function saveItem(targetStatus) {
+      try {
+        validateBeforeSave(targetStatus);
+        layout.setNotice(targetStatus === 'published' ? t(TEXT.publishing) : t(TEXT.savingDraft), 'info');
+        const payload = buildPayload(targetStatus);
+        const url = state.editingId
+          ? ('/api/data/graphics/' + encodeURIComponent(state.editingId))
+          : '/api/data/graphics';
+        const method = state.editingId ? 'PATCH' : 'POST';
+        const response = await AdminApp.requestJson(url, {
+          method: method,
+          body: payload,
+        });
+        const nextId = state.editingId || String(response && (response.id || response.graphicId || response.data && response.data.id) || '').trim();
+        await loadData(false);
+        if (nextId) {
+          applyItemToForm(nextId);
+        } else {
+          resetForm();
+        }
+        layout.setNotice(targetStatus === 'published' ? t(TEXT.publishedSaved) : t(TEXT.draftSaved), 'success');
+      } catch (error) {
+        const message = String(error && error.message || '');
+        if (
+          message === t(TEXT.emptyDraft) ||
+          message === t(TEXT.publishNeedsImage) ||
+          message === t(TEXT.publishNeedsSection) ||
+          message === t(TEXT.publishNeedsCategory)
+        ) {
+          layout.setNotice(message, 'error');
+          return;
+        }
+        layout.setNotice(t(TEXT.saveFailed) + message, 'error');
+      }
+    }
+
+    async function deleteItem(itemId) {
+      if (!window.confirm(t(TEXT.deleteConfirm))) {
+        return;
+      }
+
+      try {
+        layout.setNotice(t(TEXT.deleting), 'info');
+        await AdminApp.requestJson('/api/data/graphics/' + encodeURIComponent(itemId), {
+          method: 'DELETE',
+        });
+        if (state.editingId === itemId) {
+          resetForm();
+        }
+        await loadData(false);
+        layout.setNotice(t(TEXT.deleted), 'success');
+      } catch (error) {
+        layout.setNotice(t(TEXT.deleteFailed) + error.message, 'error');
+      }
+    }
+
+    async function loadData(showNotice) {
+      try {
+        if (showNotice !== false) {
+          layout.setNotice(t(TEXT.loading), 'info');
+        }
+        const results = await Promise.all([
+          AdminApp.requestJson('/api/data/graphics'),
+          AdminApp.requestJson('/api/data/sections'),
+          AdminApp.requestJson('/api/data/categories'),
+          AdminApp.requestJson('/api/data/tags'),
+        ]);
+
+        state.items = (Array.isArray(results[0]) ? results[0] : []).map(normalizeGraphicItem);
+        state.sections = (Array.isArray(results[1]) ? results[1] : []).slice().sort(compareByOrderAndName);
+        state.categories = (Array.isArray(results[2]) ? results[2] : []).slice().sort(compareByOrderAndName);
+        state.tags = (Array.isArray(results[3]) ? results[3] : []).slice().sort(compareByOrderAndName);
+
+        renderFilterOptions();
+        renderImageGrid();
+        renderSelectedTopics();
+        renderTopicSuggestions();
+        renderTagOptions();
+        renderItemList();
+        syncContentCount();
+        syncPublishButtonLabel();
+
+        if (showNotice !== false) {
+          layout.setNotice(t(TEXT.loaded), 'success');
+        }
+      } catch (error) {
+        layout.setNotice(t(TEXT.loadFailed) + error.message, 'error');
+      }
+    }
+
+    document.getElementById('reload-graphics-btn').addEventListener('click', function reloadPageData() {
+      loadData(true);
+    });
+
+    document.getElementById('new-graphic-btn').addEventListener('click', function openNewDraft() {
+      document.getElementById('graphic-form-section').classList.remove('hidden');
+      document.getElementById('graphic-editor-section').classList.remove('hidden');
+      resetForm();
+    });
+
+    elements.imageInput.addEventListener('change', async function handleImageInput(event) {
+      try {
+        const nextImages = await readFilesAsDataUrls(event.target.files);
+        state.images = state.images.concat(nextImages).slice(0, 18);
+        renderImageGrid();
+      } catch (error) {
+        layout.setNotice(t(TEXT.imageReadFailed), 'error');
+      } finally {
+        event.target.value = '';
+      }
+    });
+
+    elements.imageGrid.addEventListener('click', function handleImageActions(event) {
+      const removeIndex = event.target.getAttribute('data-remove-image');
+      if (removeIndex !== null) {
+        state.images.splice(Number(removeIndex), 1);
+        renderImageGrid();
+        return;
+      }
+      const coverIndex = event.target.getAttribute('data-cover-image');
+      if (coverIndex !== null) {
+        const index = Number(coverIndex);
+        const nextCover = state.images.splice(index, 1)[0];
+        state.images.unshift(nextCover);
+        renderImageGrid();
+      }
+    });
+
+    elements.contentInput.addEventListener('input', syncContentCount);
+    elements.sectionSelect.addEventListener('change', function handleSectionChange() {
+      renderCategoryOptions();
+      renderTopicSuggestions();
+    });
+    elements.categorySelect.addEventListener('change', renderTopicSuggestions);
+    elements.statusSelect.addEventListener('change', syncPublishButtonLabel);
+
+    elements.tagOptions.addEventListener('click', function handleTagToggle(event) {
+      const tagId = String(event.target.getAttribute('data-tag-id') || '').trim();
+      if (!tagId) {
+        return;
+      }
+      if (state.tagIds.includes(tagId)) {
+        state.tagIds = state.tagIds.filter(function filterTag(item) {
+          return item !== tagId;
+        });
+      } else {
+        state.tagIds.push(tagId);
+      }
+      renderTagOptions();
+    });
+
+    elements.suggestionList.addEventListener('click', function handleTopicSuggestion(event) {
+      const topic = event.target.getAttribute('data-add-topic');
+      if (!topic) {
+        return;
+      }
+      addTopic(topic);
+    });
+
+    elements.selectedTopics.addEventListener('click', function handleTopicRemoval(event) {
+      const topicButton = event.target.closest('[data-remove-topic]');
+      if (!topicButton) {
+        return;
+      }
+      state.topics.splice(Number(topicButton.getAttribute('data-remove-topic')), 1);
+      renderSelectedTopics();
+      renderTopicSuggestions();
+    });
+
+    document.getElementById('graphic-add-topic-btn').addEventListener('click', function addCustomTopic() {
+      addTopic(elements.topicInput.value);
+      elements.topicInput.value = '';
+    });
+
+    elements.topicInput.addEventListener('keydown', function onTopicKeyDown(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        addTopic(elements.topicInput.value);
+        elements.topicInput.value = '';
+      }
+    });
+
+    elements.saveDraftButton.addEventListener('click', function saveDraft() {
+      saveItem('draft');
+    });
+
+    elements.publishButton.addEventListener('click', function publishGraphic() {
+      saveItem('published');
+    });
+
+    elements.resetButton.addEventListener('click', resetForm);
+
+    elements.searchInput.addEventListener('input', function handleSearch() {
+      state.search = String(elements.searchInput.value || '');
+      renderItemList();
+    });
+
+    elements.filterStatusSelect.addEventListener('change', function handleStatusFilter() {
+      state.statusFilter = elements.filterStatusSelect.value;
+      renderItemList();
+    });
+
+    elements.filterSectionSelect.addEventListener('change', function handleSectionFilter() {
+      state.sectionFilter = elements.filterSectionSelect.value;
+      renderItemList();
+    });
+
+    elements.itemList.addEventListener('click', function handleListActions(event) {
+      const editButton = event.target.closest('[data-edit-item]');
+      if (editButton) {
+        applyItemToForm(editButton.getAttribute('data-edit-item'));
+        return;
+      }
+
+      const deleteButton = event.target.closest('[data-delete-item]');
+      if (deleteButton) {
+        deleteItem(deleteButton.getAttribute('data-delete-item'));
+      }
+    });
+
+    resetForm();
+    loadData(true);
+
+    state.unsubscribe = AdminApp.subscribeToDataChanges(function onDataChange(event) {
+      try {
+        const payload = JSON.parse(event.data || '{}');
+        if (!['graphics', 'sections', 'categories', 'tags'].includes(String(payload.dataType || ''))) {
+          return;
+        }
+        loadData(false);
+      } catch (error) {
+        // ignore malformed events
+      }
+    });
+  </script>
+</body>
+</html>

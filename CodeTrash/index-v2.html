@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevLog 后台管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .sidebar { transition: width 0.3s ease; }
+    .sidebar.collapsed { width: 64px; }
+    .sidebar-item { transition: all 0.3s; }
+    .sidebar-item:hover { background: rgba(99, 102, 241, 0.1); border-right: 3px solid #6366f1; }
+    .sidebar-item.active { background: rgba(99, 102, 241, 0.2); border-right: 3px solid #6366f1; color: #818cf8; }
+    .sidebar-text { transition: opacity 0.3s; }
+    .sidebar.collapsed .sidebar-text { opacity: 0; pointer-events: none; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .stat-card { transition: transform 0.3s, box-shadow 0.3s; }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 10px 40px rgba(99, 102, 241, 0.1); }
+    .post-row { transition: all 0.2s; }
+    .post-row:hover { background: rgba(99, 102, 241, 0.05); }
+    .pagination-btn { @apply px-3 py-1 text-sm rounded border border-gray-700 hover:bg-indigo-600 hover:border-indigo-600 transition-colors; }
+    .pagination-btn.active { @apply bg-indigo-600 border-indigo-600 text-white; }
+    .pagination-btn:disabled { @apply opacity-50 cursor-not-allowed; }
+    
+    /* 隐藏滚动条但保留功能 */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    /* 主题切换 */
+    html.light body { @apply bg-gray-50 text-gray-900; }
+    html.dark body { @apply bg-gray-900 text-gray-100; }
+    html.light .card { @apply bg-white border-gray-200; }
+    html.dark .card { @apply bg-gray-800 border-gray-700; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 h-screen overflow-hidden">
+  
+  <!-- 顶部导航栏 -->
+  <header class="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 flex-shrink-0">
+    <div class="flex items-center gap-3">
+      <button onclick="toggleSidebar()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </button>
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+          </svg>
+        </div>
+        <h1 class="text-lg font-bold sidebar-text">DevLog</h1>
+      </div>
+    </div>
+    
+    <!-- 右上角：服务器状态 + 主题切换 -->
+    <div class="flex items-center gap-4">
+      <!-- 服务器状态 -->
+      <div class="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 rounded-full">
+        <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+        <span class="text-xs text-green-700 dark:text-green-400">服务器正常</span>
+      </div>
+      
+      <!-- 主题切换 -->
+      <div class="relative">
+        <button onclick="toggleThemeMenu()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+          </svg>
+        </button>
+        <div id="themeMenu" class="hidden absolute right-0 mt-2 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+          <button onclick="setTheme('light')" class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+            白天
+          </button>
+          <button onclick="setTheme('dark')" class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            黑夜
+          </button>
+          <button onclick="setTheme('system')" class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            系统
+          </button>
+        </div>
+      </div>
+      
+      <!-- 用户菜单 -->
+      <div class="flex items-center gap-2 pl-4 border-l border-gray-200 dark:border-gray-700">
+        <span class="text-sm">管理员</span>
+        <button onclick="logout()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex h-[calc(100vh-56px)]">
+    <!-- 左侧导航栏 -->
+    <aside id="sidebar" class="sidebar w-52 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-shrink-0 overflow-y-auto no-scrollbar">
+      <nav class="py-4">
+        <div class="sidebar-item active px-4 py-3 cursor-pointer flex items-center gap-3" onclick="showPage('dashboard', this)">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+          </svg>
+          <span class="sidebar-text">概览</span>
+        </div>
+        <div class="sidebar-item px-4 py-3 cursor-pointer flex items-center gap-3" onclick="showPage('posts', this)">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          <span class="sidebar-text">文章管理</span>
+        </div>
+        <div class="sidebar-item px-4 py-3 cursor-pointer flex items-center gap-3" onclick="showPage('sections', this)">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+          </svg>
+          <span class="sidebar-text">栏目管理</span>
+        </div>
+        <div class="sidebar-item px-4 py-3 cursor-pointer flex items-center gap-3" onclick="showPage('categories', this)">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+          </svg>
+          <span class="sidebar-text">分类管理</span>
+        </div>
+        <div class="sidebar-item px-4 py-3 cursor-pointer flex items-center gap-3" onclick="showPage('tags', this)">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+          </svg>
+          <span class="sidebar-text">标签管理</span>
+        </div>
+        <div class="sidebar-item px-4 py-3 cursor-pointer flex items-center gap-3" onclick="showPage('settings', this)">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+          <span class="sidebar-text">系统设置</span>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 p-4 overflow-y-auto no-scrollbar">
+      
+      <!-- Dashboard 页面 -->
+      <div id="page-dashboard" class="page active">
+        <h2 class="text-2xl font-bold mb-4">Dashboard 概览</h2>
+        
+        <!-- 统计卡片 -->
+        <div class="grid grid-cols-4 gap-4 mb-4">
+          <div class="card bg-white dark:bg-gray-800 border rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="w-8 h-8 bg-indigo-600/20 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+              </div>
+              <span id="postTrend" class="text-green-400 text-xs">+0%</span>
+            </div>
+            <div class="text-gray-400 text-xs mb-0.5">文章总数</div>
+            <div class="text-xl font-bold" id="postCount">0</div>
+          </div>
+          <div class="card bg-white dark:bg-gray-800 border rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="w-8 h-8 bg-purple-600/20 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                </svg>
+              </div>
+              <span class="text-gray-500 text-xs">--</span>
+            </div>
+            <div class="text-gray-400 text-xs mb-0.5">分类数量</div>
+            <div class="text-xl font-bold" id="categoryCount">0</div>
+          </div>
+          <div class="card bg-white dark:bg-gray-800 border rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="w-8 h-8 bg-pink-600/20 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                </svg>
+              </div>
+              <span class="text-gray-500 text-xs">--</span>
+            </div>
+            <div class="text-gray-400 text-xs mb-0.5">标签数量</div>
+            <div class="text-xl font-bold" id="tagCount">0</div>
+          </div>
+          <div class="card bg-white dark:bg-gray-800 border rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="w-8 h-8 bg-green-600/20 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+              </div>
+              <span class="text-gray-500 text-xs">--</span>
+            </div>
+            <div class="text-gray-400 text-xs mb-0.5">草稿箱</div>
+            <div class="text-xl font-bold" id="draftCount">0</div>
+          </div>
+        </div>
+
+        <!-- 发布趋势 + 最近文章 -->
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div class="card bg-white dark:bg-gray-800 border rounded-xl p-4">
+            <h3 class="text-sm font-bold mb-2">文章发布趋势</h3>
+            <div class="h-32 flex items-end justify-between gap-1" id="trendChart"></div>
+            <div class="flex justify-between mt-1 text-xs text-gray-500" id="trendLabels"></div>
+          </div>
+          <div class="card bg-white dark:bg-gray-800 border rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-bold">最近文章</h3>
+              <a href="#" onclick="showPage('posts', document.querySelectorAll('.sidebar-item')[1])" class="text-indigo-400 hover:text-indigo-300 text-xs">全部 →</a>
+            </div>
+            <div id="recentPosts" class="space-y-1"></div>
+          </div>
+        </div>
+
+        <!-- 系统状态 -->
+        <div class="card bg-white dark:bg-gray-800 border rounded-xl p-4">
+          <h3 class="text-sm font-bold mb-3">系统状态</h3>
+          <div class="grid grid-cols-3 gap-3">
+            <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <div class="w-7 h-7 bg-green-600/20 rounded-lg flex items-center justify-center">
+                <svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12l2 2l10 -10"></path>
+                </svg>
+              </div>
+              <div><div class="text-xs text-gray-500">服务状态</div><div class="text-sm font-medium">运行中</div></div>
+            </div>
+            <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <div class="w-7 h-7 bg-indigo-600/20 rounded-lg flex items-center justify-center">
+                <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2 -1l-2 -1m2 1v2.5M14 4l-2 -1l-2 1M4 7l2 -1M4 7l2 1M4 7v2.5M12 21l-2 -1m2 1l2 -1m-2 1v-2.5M6 18l-2 -1v-2.5M18 18l2 -1v-2.5"></path>
+                </svg>
+              </div>
+              <div><div class="text-xs text-gray-500">Node 版本</div><div class="text-sm font-medium" id="nodeVersion">v24.12.0</div></div>
+            </div>
+            <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <div class="w-7 h-7 bg-purple-600/20 rounded-lg flex items-center justify-center">
+                <svg class="w-3.5 h-3.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <div><div class="text-xs text-gray-500">运行时间</div><div class="text-sm font-medium" id="uptime">--</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 其他页面占位 -->
+      <div id="page-posts" class="page"><h2 class="text-2xl font-bold">文章管理</h2><p class="text-gray-500 mt-4">开发中...</p></div>
+      <div id="page-sections" class="page"><h2 class="text-2xl font-bold">栏目管理</h2><p class="text-gray-500 mt-4">开发中...</p></div>
+      <div id="page-categories" class="page"><h2 class="text-2xl font-bold">分类管理</h2><p class="text-gray-500 mt-4">开发中...</p></div>
+      <div id="page-tags" class="page"><h2 class="text-2xl font-bold">标签管理</h2><p class="text-gray-500 mt-4">开发中...</p></div>
+      <div id="page-settings" class="page"><h2 class="text-2xl font-bold">系统设置</h2><p class="text-gray-500 mt-4">开发中...</p></div>
+
+    </main>
+  </div>
+
+  <script>
+    // 主题切换
+    function initTheme() {
+      const theme = localStorage.getItem('theme') || 'system';
+      setTheme(theme);
+    }
+    
+    function setTheme(theme) {
+      localStorage.setItem('theme', theme);
+      const html = document.documentElement;
+      html.classList.remove('light', 'dark');
+      
+      if (theme === 'system') {
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        html.classList.add(systemDark ? 'dark' : 'light');
+      } else {
+        html.classList.add(theme);
+      }
+    }
+    
+    function toggleThemeMenu() {
+      document.getElementById('themeMenu').classList.toggle('hidden');
+    }
+    
+    // 侧边栏折叠
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('collapsed');
+    }
+    
+    // 页面切换
+    function showPage(pageId, sidebarEl) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-' + pageId).classList.add('active');
+      document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+      if (sidebarEl) sidebarEl.classList.add('active');
+    }
+    
+    function logout() { alert('退出登录'); }
+    
+    // 初始化
+    initTheme();
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#themeMenu') && !e.target.closest('button[onclick*="theme"]')) {
+        document.getElementById('themeMenu').classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

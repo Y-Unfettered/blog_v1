@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Article Redirect</title>
+</head>
+<body>
+  <p>Redirecting to the current article route...</p>
+  <noscript>
+    <p>JavaScript is required. Open <a href="/">the homepage</a> and navigate to the article there.</p>
+  </noscript>
+  <script>
+    (async function redirectLegacyArticlePage() {
+      const params = new URLSearchParams(window.location.search);
+      const slug = params.get('slug');
+      const id = params.get('id');
+
+      function normalizePath(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        return raw.startsWith('/') ? raw : ('/' + raw.replace(/^\/+/, ''));
+      }
+
+      function parseIdList(post) {
+        const values = [];
+        const candidates = [post && post.categories, post && post.categoryIds, post && post.categoryId];
+
+        candidates.forEach(function appendCandidate(candidate) {
+          if (Array.isArray(candidate)) {
+            candidate.forEach(function appendItem(item) {
+              const value = String(item || '').trim();
+              if (value && values.indexOf(value) < 0) {
+                values.push(value);
+              }
+            });
+            return;
+          }
+          const value = String(candidate || '').trim();
+          if (value && values.indexOf(value) < 0) {
+            values.push(value);
+          }
+        });
+
+        return values;
+      }
+
+      function resolvePrimaryCategory(post, categories) {
+        const categoryIds = parseIdList(post);
+        const primaryCategoryId = categoryIds[0] || '';
+        return categories.find(function matchCategory(category) {
+          return String(category && category.id) === primaryCategoryId;
+        }) || null;
+      }
+
+      function resolveSection(post, sections, categories) {
+        const directSection = sections.find(function matchSection(section) {
+          return String(section && section.id) === String(post && post.sectionId || '');
+        });
+        if (directSection) {
+          return directSection;
+        }
+
+        const primaryCategory = resolvePrimaryCategory(post, categories);
+        if (primaryCategory && primaryCategory.sectionId) {
+          return sections.find(function matchCategorySection(section) {
+            return String(section && section.id) === String(primaryCategory.sectionId);
+          }) || null;
+        }
+
+        return null;
+      }
+
+      function buildPostHash(post, sections, categories) {
+        if (!post || !post.id) {
+          return '/#/';
+        }
+
+        const routeParts = [];
+        const section = resolveSection(post, sections, categories);
+        const primaryCategory = resolvePrimaryCategory(post, categories);
+        const sectionPath = normalizePath(section && (section.url || section.slug || section.id || ''))
+          .replace(/^\/+|\/+$/g, '');
+        const categorySlug = String(primaryCategory && (primaryCategory.slug || primaryCategory.id) || '')
+          .trim()
+          .replace(/^\/+|\/+$/g, '');
+
+        if (sectionPath) {
+          routeParts.push.apply(routeParts, sectionPath.split('/').filter(Boolean));
+        }
+        if (categorySlug) {
+          routeParts.push(categorySlug);
+        }
+
+        const base = routeParts.length ? ('/#/' + routeParts.map(encodeURIComponent).join('/')) : '/#/post';
+        return base + '?id=' + encodeURIComponent(String(post.id));
+      }
+
+      function goToHash(targetHash) {
+        window.location.replace(targetHash || '/#/');
+      }
+
+      if (slug && !id) {
+        goToHash('/#/post/' + slug);
+        return;
+      }
+
+      if (!id) {
+        goToHash('/#/');
+        return;
+      }
+
+      try {
+        const responses = await Promise.all([
+          fetch('/api/posts'),
+          fetch('/api/categories'),
+          fetch('/api/sections'),
+        ]);
+
+        if (responses.some(function hasError(response) { return !response.ok; })) {
+          throw new Error('Failed to load article route data');
+        }
+
+        const posts = await responses[0].json();
+        const categories = await responses[1].json();
+        const sections = await responses[2].json();
+        const matchedPost = Array.isArray(posts)
+          ? posts.find((post) => String(post && post.id) === String(id))
+          : null;
+
+        if (matchedPost) {
+          goToHash(buildPostHash(matchedPost, Array.isArray(sections) ? sections : [], Array.isArray(categories) ? categories : []));
+          return;
+        }
+
+        goToHash('/#/');
+      } catch (error) {
+        goToHash('/#/');
+      }
+    }());
+  </script>
+</body>
+</html>

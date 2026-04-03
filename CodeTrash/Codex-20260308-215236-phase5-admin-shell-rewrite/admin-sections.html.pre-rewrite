@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>后台管理 - 栏目管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+            dark: {
+              bg: '#0a0a0a',
+              surface: '#111111',
+              border: '#1f1f1f',
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .sidebar-item { transition: all 0.2s ease; border-right: 2px solid transparent; }
+    .sidebar-item:hover { background: rgba(99, 102, 241, 0.08); }
+    .sidebar-item.active { background: rgba(99, 102, 241, 0.12); border-right-color: #6366f1; color: #6366f1; }
+    .dark .sidebar-item:hover { background: rgba(99, 102, 241, 0.06); }
+    .dark .sidebar-item.active { background: rgba(99, 102, 241, 0.1); border-right-color: #818cf8; color: #818cf8; }
+    .section-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .section-card:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12); }
+    .dark .section-card:hover { box-shadow: 0 12px 32px rgba(0, 0, 0, 0.32); }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-dark-bg dark:text-gray-100 transition-colors duration-200">
+  <header class="sticky top-0 z-50 bg-white dark:bg-dark-surface border-b border-gray-200 dark:border-dark-border">
+    <div class="flex items-center justify-between px-6 h-16">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+          </svg>
+        </div>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">DevLog 后台管理</h1>
+      </div>
+      <div class="flex items-center gap-4">
+        <button onclick="toggleTheme()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors" title="切换主题">
+          <svg id="themeIcon" class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+          </svg>
+        </button>
+        <button onclick="goBack()" class="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-sm font-medium text-gray-700 dark:text-gray-300">
+          返回
+        </button>
+        <button onclick="logout()" class="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-sm font-medium text-gray-700 dark:text-gray-300">
+          退出
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex min-h-[calc(100vh-64px)]">
+    <aside class="w-64 bg-white dark:bg-dark-surface border-r border-gray-200 dark:border-dark-border sticky top-16 h-[calc(100vh-64px)] overflow-y-auto flex-shrink-0">
+      <nav class="py-4">
+        <a href="/admin/dashboard" class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3">
+          <span class="font-medium">概览</span>
+        </a>
+        <a href="/admin/posts" class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3">
+          <span class="font-medium">文章管理</span>
+        </a>
+        <div class="sidebar-item active px-6 py-3 cursor-pointer flex items-center gap-3">
+          <span class="font-medium">栏目管理</span>
+        </div>
+        <a href="/admin/categories" class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3">
+          <span class="font-medium">分类管理</span>
+        </a>
+        <a href="/admin/tags" class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3">
+          <span class="font-medium">标签管理</span>
+        </a>
+        <a href="/admin/settings" class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3">
+          <span class="font-medium">系统设置</span>
+        </a>
+      </nav>
+    </aside>
+
+    <main class="flex-1 p-6 overflow-y-auto">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-white">栏目管理</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">统一使用 `description` 字段，不再混用 `desc`。</p>
+        </div>
+        <button onclick="openCreateModal()" class="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors font-medium shadow-lg shadow-indigo-500/20">
+          新建栏目
+        </button>
+      </div>
+
+      <div class="bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="sectionsContainer"></div>
+      </div>
+    </main>
+  </div>
+
+  <div id="modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div class="bg-white dark:bg-dark-surface rounded-2xl p-6 w-full max-w-md mx-4 border border-gray-200 dark:border-dark-border shadow-2xl">
+      <h3 id="modalTitle" class="text-lg font-bold text-gray-900 dark:text-white mb-4">新建栏目</h3>
+      <form id="sectionForm" class="space-y-4" onsubmit="event.preventDefault(); saveSection();">
+        <input type="hidden" id="sectionId">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">栏目名称</label>
+          <input type="text" id="sectionName" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">栏目描述</label>
+          <textarea id="sectionDescription" rows="3" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">排序</label>
+          <input type="number" id="sectionOrder" min="1" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="flex gap-3 pt-4">
+          <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-dark-surface hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-dark-border">取消</button>
+          <button type="submit" class="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors font-medium text-white shadow-lg shadow-indigo-500/20">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let currentTheme = localStorage.getItem('theme') || 'dark';
+    let sections = [];
+
+    function initTheme() {
+      setTheme(currentTheme);
+    }
+
+    function toggleTheme() {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      setTheme(currentTheme);
+    }
+
+    function setTheme(theme) {
+      currentTheme = theme;
+      localStorage.setItem('theme', theme);
+      const html = document.documentElement;
+      const icon = document.getElementById('themeIcon');
+
+      html.classList.remove('light', 'dark');
+      html.classList.add(theme);
+
+      if (theme === 'dark') {
+        icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>';
+      } else {
+        icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>';
+      }
+    }
+
+    function getToken() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        logout();
+        return '';
+      }
+      return token;
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    async function loadSections() {
+      try {
+        const response = await fetch('/api/data/sections', {
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+        });
+
+        if (response.status === 401) {
+          logout();
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error('Load failed');
+        }
+
+        sections = await response.json();
+        renderSections();
+      } catch (error) {
+        console.error('Load sections failed:', error);
+        alert('加载栏目失败。');
+      }
+    }
+
+    function renderSections() {
+      const container = document.getElementById('sectionsContainer');
+      if (!sections.length) {
+        container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500 dark:text-gray-400">暂无栏目，点击右上角创建。</div>';
+        return;
+      }
+
+      container.innerHTML = sections.map((section) => `
+        <div class="section-card bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl p-5">
+          <div class="flex items-start justify-between gap-3 mb-3">
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">${escapeHtml(section.name || '未命名栏目')}</h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Slug: ${escapeHtml(section.slug || '-')}</p>
+            </div>
+            <span class="px-2 py-1 text-xs bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg">排序 ${Number(section.order) || 0}</span>
+          </div>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">${escapeHtml(section.description || section.desc || '暂无描述')}</p>
+          <div class="flex gap-2">
+            <button onclick="editSection('${escapeHtml(section.id)}')" class="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-sm font-medium text-gray-700 dark:text-gray-300">编辑</button>
+            <button onclick="deleteSection('${escapeHtml(section.id)}')" class="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors text-sm font-medium text-white">删除</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openCreateModal() {
+      document.getElementById('modalTitle').textContent = '新建栏目';
+      document.getElementById('sectionForm').reset();
+      document.getElementById('sectionId').value = '';
+      document.getElementById('sectionOrder').value = sections.reduce((max, item) => Math.max(max, Number(item.order) || 0), 0) + 1;
+      document.getElementById('modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+    }
+
+    function editSection(id) {
+      const section = sections.find((item) => String(item.id) === String(id));
+      if (!section) return;
+
+      document.getElementById('modalTitle').textContent = '编辑栏目';
+      document.getElementById('sectionId').value = section.id;
+      document.getElementById('sectionName').value = section.name || '';
+      document.getElementById('sectionDescription').value = section.description || section.desc || '';
+      document.getElementById('sectionOrder').value = Number(section.order) || 1;
+      document.getElementById('modal').classList.remove('hidden');
+    }
+
+    async function saveSection() {
+      const id = document.getElementById('sectionId').value;
+      const name = document.getElementById('sectionName').value.trim();
+
+      if (!name) {
+        alert('请输入栏目名称。');
+        return;
+      }
+
+      const existingSection = sections.find((item) => String(item.id) === String(id));
+      const payload = id
+        ? {
+            ...existingSection,
+            name,
+            description: document.getElementById('sectionDescription').value.trim(),
+            order: Number(document.getElementById('sectionOrder').value) || 1,
+          }
+        : {
+            name,
+            description: document.getElementById('sectionDescription').value.trim(),
+            order: Number(document.getElementById('sectionOrder').value) || 1,
+          };
+
+      try {
+        const response = await fetch(`/api/data/sections${id ? `/${id}` : ''}`, {
+          method: id ? 'PATCH' : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${getToken()}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.status === 401) {
+          logout();
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error('Save failed');
+        }
+
+        closeModal();
+        await loadSections();
+      } catch (error) {
+        console.error('Save section failed:', error);
+        alert('保存栏目失败。');
+      }
+    }
+
+    async function deleteSection(id) {
+      if (!confirm('确定要删除这个栏目吗？')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/data/sections/${id}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+        });
+
+        if (response.status === 401) {
+          logout();
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error('Delete failed');
+        }
+
+        await loadSections();
+      } catch (error) {
+        console.error('Delete section failed:', error);
+        alert('删除栏目失败。');
+      }
+    }
+
+    function goBack() { window.history.back(); }
+    function logout() { localStorage.removeItem('token'); window.location.href = '/admin'; }
+
+    initTheme();
+    loadSections();
+  </script>
+</body>
+</html>

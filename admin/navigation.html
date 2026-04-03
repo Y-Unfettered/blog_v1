@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevLog Navigation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+            dark: {
+              bg: '#0a0a0a',
+              surface: '#111111',
+              border: '#1f1f1f',
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="/admin/admin-common.css">
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-[#0a0a0a] dark:text-gray-100">
+  <div id="admin-app"></div>
+
+  <script src="/admin/admin-common.js"></script>
+  <script>
+    if (!window.AdminApp || !AdminApp.requireAuth()) {
+      throw new Error('Missing admin auth context.');
+    }
+
+    const layout = AdminApp.mountPage({
+      active: 'navigation',
+      title: 'Navigation Management',
+      description: 'Manage website navigation structure, including system items and section links.',
+      actions: [
+        {
+          id: 'reload-navigation-btn',
+          label: 'Reload',
+          className: 'rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800',
+        },
+        {
+          id: 'add-navigation-btn',
+          label: 'Add Navigation Item',
+          className: 'rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-colors hover:bg-indigo-700',
+        },
+      ],
+    });
+
+    layout.content.innerHTML = `
+      <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <article class="admin-panel metric-card p-5">
+          <div class="text-sm text-gray-500 dark:text-gray-400">Total Navigation Items</div>
+          <div id="metric-total-items" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
+          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">All navigation entries in the system.</div>
+        </article>
+        <article class="admin-panel metric-card p-5">
+          <div class="text-sm text-gray-500 dark:text-gray-400">Visible Items</div>
+          <div id="metric-visible-items" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
+          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">Navigation items currently visible on the site.</div>
+        </article>
+        <article class="admin-panel metric-card p-5">
+          <div class="text-sm text-gray-500 dark:text-gray-400">System Items</div>
+          <div id="metric-system-items" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
+          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">Built-in navigation items like Home and About.</div>
+        </article>
+      </section>
+
+      <section class="admin-panel mt-6 p-6">
+        <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_220px]">
+          <div>
+            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="nav-search-input">Search</label>
+            <input id="nav-search-input" class="input-control" type="search" placeholder="Search by name, label, or URL">
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="nav-type-filter">Type</label>
+            <select id="nav-type-filter" class="select-control">
+              <option value="all">All items</option>
+              <option value="system">System items</option>
+              <option value="section">Section links</option>
+            </select>
+          </div>
+        </div>
+        <div id="nav-list" class="mt-6 space-y-4"></div>
+      </section>
+
+      <div id="nav-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm">
+        <div class="admin-panel w-full max-w-2xl p-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div class="admin-kicker text-gray-500 dark:text-gray-400">Navigation Editor</div>
+              <h2 id="nav-modal-title" class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">Add Navigation Item</h2>
+            </div>
+            <button id="nav-modal-close" type="button" class="rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">Close</button>
+          </div>
+          <form id="nav-form" class="mt-6 grid gap-4" novalidate>
+            <div class="grid gap-4 md:grid-cols-2">
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="nav-name-input">Name</label>
+                <input id="nav-name-input" class="input-control" type="text" maxlength="80" required>
+              </div>
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="nav-label-input">Label</label>
+                <input id="nav-label-input" class="input-control" type="text" maxlength="80" required>
+              </div>
+            </div>
+            <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_140px]">
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="nav-href-input">URL</label>
+                <input id="nav-href-input" class="input-control" type="text" maxlength="160" placeholder="#/design or https://example.com">
+              </div>
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="nav-order-input">Order</label>
+                <input id="nav-order-input" class="input-control" type="number" min="1" step="1">
+              </div>
+            </div>
+            <div class="flex items-center gap-3 rounded-2xl border border-dashed border-gray-200 px-4 py-3 dark:border-gray-700">
+              <input id="nav-visible-input" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" type="checkbox" checked>
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300" for="nav-visible-input">Visible in navigation</label>
+            </div>
+            <div class="flex items-center gap-3 rounded-2xl border border-dashed border-gray-200 px-4 py-3 dark:border-gray-700">
+              <input id="nav-enabled-input" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" type="checkbox" checked>
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300" for="nav-enabled-input">Enabled</label>
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="nav-description-input">Description</label>
+              <textarea id="nav-description-input" class="textarea-control" rows="3" maxlength="240" placeholder="Optional internal note for editors."></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+              <button id="nav-delete-btn" type="button" class="hidden rounded-xl border border-rose-200 px-4 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-50 dark:border-rose-900/50 dark:text-rose-300 dark:hover:bg-rose-500/10">Delete</button>
+              <button type="submit" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-colors hover:bg-indigo-700">Save Navigation Item</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    const state = {
+      navItems: [],
+      editingId: '',
+      search: '',
+      typeFilter: 'all',
+    };
+
+    const elements = {
+      searchInput: document.getElementById('nav-search-input'),
+      typeFilter: document.getElementById('nav-type-filter'),
+      list: document.getElementById('nav-list'),
+      modal: document.getElementById('nav-modal'),
+      modalTitle: document.getElementById('nav-modal-title'),
+      closeModalButton: document.getElementById('nav-modal-close'),
+      form: document.getElementById('nav-form'),
+      nameInput: document.getElementById('nav-name-input'),
+      labelInput: document.getElementById('nav-label-input'),
+      hrefInput: document.getElementById('nav-href-input'),
+      orderInput: document.getElementById('nav-order-input'),
+      visibleInput: document.getElementById('nav-visible-input'),
+      enabledInput: document.getElementById('nav-enabled-input'),
+      descriptionInput: document.getElementById('nav-description-input'),
+      deleteButton: document.getElementById('nav-delete-btn'),
+    };
+
+    function normalizeNavHref(value) {
+      let href = String(value || '').trim();
+      if (!href) {
+        return '';
+      }
+      if (/^https?:\/\//i.test(href)) {
+        return href;
+      }
+      if (!href.startsWith('#')) {
+        href = href.startsWith('/') ? `#${href}` : `#/${href}`;
+      }
+      return href;
+    }
+
+    function compareByOrder(left, right) {
+      return (Number(left.order) || 0) - (Number(right.order) || 0);
+    }
+
+    function syncMetrics() {
+      const totalItems = state.navItems.length;
+      const visibleItems = state.navItems.filter(item => item.visible !== false).length;
+      const systemItems = state.navItems.filter(item => item.type === 'system').length;
+
+      document.getElementById('metric-total-items').textContent = String(totalItems);
+      document.getElementById('metric-visible-items').textContent = String(visibleItems);
+      document.getElementById('metric-system-items').textContent = String(systemItems);
+    }
+
+    function getFilteredNavItems() {
+      const search = state.search.trim().toLowerCase();
+
+      return state.navItems
+        .filter(item => {
+          if (state.typeFilter !== 'all') {
+            if (state.typeFilter === 'system' && item.type !== 'system') {
+              return false;
+            }
+            if (state.typeFilter === 'section' && item.type !== 'section') {
+              return false;
+            }
+          }
+
+          if (!search) {
+            return true;
+          }
+
+          const haystack = [
+            item.name,
+            item.label,
+            item.href,
+            item.description,
+          ].join(' ').toLowerCase();
+
+          return haystack.includes(search);
+        })
+        .sort(compareByOrder);
+    }
+
+    function renderList() {
+      const items = getFilteredNavItems();
+
+      if (!items.length) {
+        elements.list.innerHTML = `
+          <div class="rounded-2xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+            No navigation items match the current filters.
+          </div>
+        `;
+        return;
+      }
+
+      elements.list.innerHTML = items.map(item => {
+        const isEnabled = item.enabled !== false;
+        const isVisible = item.visible !== false;
+        const description = String(item.description || '').trim() || 'No description.';
+        const typeLabel = item.type === 'system' ? 'System' : 'Section';
+        const typeClass = item.type === 'system' ? 'bg-blue-500/10 text-blue-500' : 'bg-green-500/10 text-green-500';
+
+        return `
+          <article class="admin-panel overflow-hidden">
+            <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800">
+              <div class="flex items-start justify-between gap-4">
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">${AdminApp.escapeHtml(item.label || item.name || item.id)}</h2>
+                    <span class="pill ${typeClass}">${typeLabel}</span>
+                    <span class="pill ${isEnabled ? 'status-published' : 'status-draft'}">${isEnabled ? 'Enabled' : 'Disabled'}</span>
+                    ${isVisible ? '' : '<span class="pill bg-gray-500/10 text-gray-500">Hidden</span>'}
+                  </div>
+                  <div class="mt-2 flex flex-wrap gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <span>URL: ${AdminApp.escapeHtml(item.href || '')}</span>
+                    <span>Order: ${AdminApp.escapeHtml(item.order || '--')}</span>
+                    ${item.sectionId ? `<span>Section: ${AdminApp.escapeHtml(item.sectionId)}</span>` : ''}
+                  </div>
+                </div>
+                <div class="flex shrink-0 items-center gap-2">
+                  <button data-action="edit" data-id="${AdminApp.escapeHtml(item.id)}" type="button" class="rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">Edit</button>
+                  ${item.type !== 'system' ? `
+                    <button data-action="delete" data-id="${AdminApp.escapeHtml(item.id)}" type="button" class="rounded-xl border border-rose-200 px-3 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-50 dark:border-rose-900/50 dark:text-rose-300 dark:hover:bg-rose-500/10">Delete</button>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+            <div class="px-5 py-4">
+              <div class="text-sm leading-6 text-gray-600 dark:text-gray-300">${AdminApp.escapeHtml(description)}</div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function openModal(item) {
+      const isEditing = !!item;
+      state.editingId = isEditing ? String(item.id) : '';
+
+      elements.modalTitle.textContent = isEditing ? 'Edit Navigation Item' : 'Add Navigation Item';
+      elements.nameInput.value = isEditing ? (item.name || '') : '';
+      elements.labelInput.value = isEditing ? (item.label || '') : '';
+      elements.hrefInput.value = isEditing ? (item.href || '') : '';
+      elements.orderInput.value = isEditing ? String(item.order || '') : '';
+      elements.visibleInput.checked = isEditing ? item.visible !== false : true;
+      elements.enabledInput.checked = isEditing ? item.enabled !== false : true;
+      elements.descriptionInput.value = isEditing ? (item.description || '') : '';
+      
+      elements.deleteButton.classList.toggle('hidden', !isEditing || item.type === 'system');
+
+      elements.modal.classList.remove('hidden');
+      elements.modal.classList.add('flex');
+      elements.nameInput.focus();
+    }
+
+    function closeModal() {
+      state.editingId = '';
+      elements.modal.classList.add('hidden');
+      elements.modal.classList.remove('flex');
+      elements.form.reset();
+      elements.visibleInput.checked = true;
+      elements.enabledInput.checked = true;
+    }
+
+    function getNavItemById(itemId) {
+      return state.navItems.find(item => String(item.id) === String(itemId)) || null;
+    }
+
+    async function saveNavItem() {
+      const name = String(elements.nameInput.value || '').trim();
+      const label = String(elements.labelInput.value || '').trim();
+      const href = normalizeNavHref(elements.hrefInput.value);
+
+      if (!name || !label || !href) {
+        layout.setNotice('Name, label, and URL are required.', 'error');
+        return;
+      }
+
+      const payload = {
+        name: name,
+        label: label,
+        href: href,
+        order: Number(elements.orderInput.value) || undefined,
+        visible: !!elements.visibleInput.checked,
+        enabled: !!elements.enabledInput.checked,
+        description: String(elements.descriptionInput.value || '').trim(),
+      };
+
+      const isEditing = !!state.editingId;
+
+      try {
+        layout.setNotice(isEditing ? 'Saving navigation changes...' : 'Adding navigation item...', 'info');
+        
+        if (isEditing) {
+          await AdminApp.requestJson('/api/data/nav/' + encodeURIComponent(state.editingId), {
+            method: 'PATCH',
+            body: payload,
+          });
+        } else {
+          await AdminApp.requestJson('/api/data/nav', {
+            method: 'POST',
+            body: payload,
+          });
+        }
+
+        closeModal();
+        await loadData(false);
+        layout.setNotice(isEditing ? 'Navigation item updated.' : 'Navigation item added.', 'success');
+      } catch (error) {
+        layout.setNotice(error.message || 'Failed to save navigation item.', 'error');
+      }
+    }
+
+    async function deleteNavItem(itemId) {
+      const item = getNavItemById(itemId);
+      if (!item || item.type === 'system') {
+        return;
+      }
+
+      if (!window.confirm('Delete navigation item "' + (item.label || item.name || item.id) + '"?')) {
+        return;
+      }
+
+      try {
+        layout.setNotice('Deleting navigation item...', 'info');
+        await AdminApp.requestJson('/api/data/nav/' + encodeURIComponent(itemId), {
+          method: 'DELETE',
+        });
+        
+        if (state.editingId === String(itemId)) {
+          closeModal();
+        }
+        
+        await loadData(false);
+        layout.setNotice('Navigation item deleted.', 'success');
+      } catch (error) {
+        layout.setNotice(error.message || 'Failed to delete navigation item.', 'error');
+      }
+    }
+
+    async function loadData(showMessage) {
+      try {
+        if (showMessage !== false) {
+          layout.setNotice('Loading navigation data...', 'info');
+        }
+
+        const navItems = await AdminApp.requestJson('/api/nav');
+        state.navItems = Array.isArray(navItems) ? navItems : [];
+
+        syncMetrics();
+        renderList();
+
+        if (showMessage !== false) {
+          layout.setNotice('Navigation data loaded.', 'success');
+        }
+      } catch (error) {
+        layout.setNotice(error.message || 'Failed to load navigation data.', 'error');
+      }
+    }
+
+    document.getElementById('reload-navigation-btn').addEventListener('click', function onReload() {
+      loadData(true);
+    });
+
+    document.getElementById('add-navigation-btn').addEventListener('click', function onCreate() {
+      openModal(null);
+    });
+
+    elements.searchInput.addEventListener('input', function onSearch() {
+      state.search = elements.searchInput.value || '';
+      renderList();
+    });
+
+    elements.typeFilter.addEventListener('change', function onTypeFilter() {
+      state.typeFilter = elements.typeFilter.value || 'all';
+      renderList();
+    });
+
+    elements.closeModalButton.addEventListener('click', closeModal);
+
+    elements.modal.addEventListener('click', function onModalClick(event) {
+      if (event.target === elements.modal) {
+        closeModal();
+      }
+    });
+
+    elements.form.addEventListener('submit', function onSubmit(event) {
+      event.preventDefault();
+      saveNavItem();
+    });
+
+    elements.deleteButton.addEventListener('click', function onDeleteButton() {
+      if (state.editingId) {
+        deleteNavItem(state.editingId);
+      }
+    });
+
+    elements.list.addEventListener('click', function onListClick(event) {
+      const button = event.target.closest('button[data-action][data-id]');
+      if (!button) {
+        return;
+      }
+
+      const action = button.getAttribute('data-action');
+      const itemId = button.getAttribute('data-id');
+
+      if (action === 'edit') {
+        openModal(getNavItemById(itemId));
+        return;
+      }
+
+      if (action === 'delete') {
+        deleteNavItem(itemId);
+      }
+    });
+
+    const unsubscribe = AdminApp.subscribeToDataChanges(function onDataChange() {
+      loadData(false);
+    });
+
+    window.addEventListener('beforeunload', unsubscribe);
+
+    loadData(true);
+  </script>
+</body>
+</html>

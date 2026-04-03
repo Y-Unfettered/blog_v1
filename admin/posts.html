@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevLog Post Management</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+            dark: {
+              bg: '#0a0a0a',
+              surface: '#111111',
+              border: '#1f1f1f',
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="/admin/admin-common.css">
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-[#0a0a0a] dark:text-gray-100">
+  <div id="admin-app"></div>
+
+  <script src="/admin/admin-common.js"></script>
+  <script>
+    if (!window.AdminApp || !AdminApp.requireAuth()) {
+      throw new Error('Missing admin auth context.');
+    }
+
+    const layout = AdminApp.mountPage({
+      active: 'posts',
+      title: { en: 'Post Management', zh: '文章管理' },
+      description: {
+        en: 'Review drafts and published posts, filter by section and category, and make quick status changes without leaving the list view.',
+        zh: '集中查看草稿与已发布文章，按栏目和分类筛选，并在列表页直接完成状态调整。',
+      },
+      actions: [
+        {
+          id: 'reload-posts-btn',
+          label: 'Reload',
+          className: 'rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800',
+        },
+        {
+          id: 'create-post-btn',
+          label: 'New Post',
+          href: '/admin/editor',
+          className: 'rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-colors hover:bg-indigo-700',
+        },
+      ],
+    });
+
+    layout.content.innerHTML = `
+      <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <article class="admin-panel metric-card p-5">
+          <div class="text-sm text-gray-500 dark:text-gray-400">Total Posts</div>
+          <div id="metric-total-posts" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
+          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">All posts in storage, regardless of status.</div>
+        </article>
+        <article class="admin-panel metric-card p-5">
+          <div class="text-sm text-gray-500 dark:text-gray-400">Published</div>
+          <div id="metric-published-posts" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
+          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">Posts currently visible on the public site.</div>
+        </article>
+        <article class="admin-panel metric-card p-5">
+          <div class="text-sm text-gray-500 dark:text-gray-400">Drafts</div>
+          <div id="metric-draft-posts" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
+          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">Posts that still need editing or review.</div>
+        </article>
+        <article class="admin-panel metric-card p-5">
+          <div class="text-sm text-gray-500 dark:text-gray-400">Pinned</div>
+          <div id="metric-pinned-posts" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
+          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">Posts marked to stay prominent.</div>
+        </article>
+      </section>
+
+      <section class="admin-panel mt-6 p-6">
+        <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_200px_200px_200px_180px_140px]">
+          <div>
+            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="post-search-input">Search</label>
+            <input id="post-search-input" class="input-control" type="search" placeholder="Search by title, slug, summary, or content">
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="post-status-filter">Status</label>
+            <select id="post-status-filter" class="select-control">
+              <option value="all">All statuses</option>
+              <option value="published">Published</option>
+              <option value="draft">Draft</option>
+              <option value="pinned">Pinned only</option>
+            </select>
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="post-section-filter">Section</label>
+            <select id="post-section-filter" class="select-control">
+              <option value="">All sections</option>
+            </select>
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="post-category-filter">Category</label>
+            <select id="post-category-filter" class="select-control">
+              <option value="">All categories</option>
+            </select>
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="post-sort-select">Sort</label>
+            <select id="post-sort-select" class="select-control">
+              <option value="updated">Recently updated</option>
+              <option value="created">Recently created</option>
+              <option value="title">Title A-Z</option>
+            </select>
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="post-page-size-select">Page size</label>
+            <select id="post-page-size-select" class="select-control">
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mt-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div id="post-pagination-summary" class="text-sm text-gray-500 dark:text-gray-400">--</div>
+          <div class="flex items-center gap-3">
+            <button id="post-prev-page-btn" type="button" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">Previous</button>
+            <button id="post-next-page-btn" type="button" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">Next</button>
+          </div>
+        </div>
+
+        <div id="post-list" class="mt-6 grid gap-4"></div>
+      </section>
+    `;
+
+    const state = {
+      posts: [],
+      categories: [],
+      sections: [],
+      search: '',
+      statusFilter: 'all',
+      sectionFilter: '',
+      categoryFilter: '',
+      sortBy: 'updated',
+      pageSize: 10,
+      page: 1,
+    };
+
+    const elements = {
+      searchInput: document.getElementById('post-search-input'),
+      statusFilter: document.getElementById('post-status-filter'),
+      sectionFilter: document.getElementById('post-section-filter'),
+      categoryFilter: document.getElementById('post-category-filter'),
+      sortSelect: document.getElementById('post-sort-select'),
+      pageSizeSelect: document.getElementById('post-page-size-select'),
+      paginationSummary: document.getElementById('post-pagination-summary'),
+      prevPageButton: document.getElementById('post-prev-page-btn'),
+      nextPageButton: document.getElementById('post-next-page-btn'),
+      list: document.getElementById('post-list'),
+    };
+
+    function compareByOrderAndName(left, right) {
+      const orderDiff = (Number(left.order) || 0) - (Number(right.order) || 0);
+      if (orderDiff !== 0) {
+        return orderDiff;
+      }
+      return String(left.name || '').localeCompare(String(right.name || ''));
+    }
+
+    function getPostStatus(post) {
+      return post.status === 'published' || post.published ? 'published' : 'draft';
+    }
+
+    function resolveCategoryIds(post) {
+      if (Array.isArray(post.categories)) {
+        return post.categories.map(String);
+      }
+      if (Array.isArray(post.categoryIds)) {
+        return post.categoryIds.map(String);
+      }
+      if (post.categoryId) {
+        return [String(post.categoryId)];
+      }
+      return [];
+    }
+
+    function getPrimaryCategoryId(post) {
+      return resolveCategoryIds(post)[0] || '';
+    }
+
+    function getPostUpdatedTime(post) {
+      return new Date(post.updatedAt || post.createdAt || post.updated_at || post.created_at || 0).getTime() || 0;
+    }
+
+    function getPostCreatedTime(post) {
+      return new Date(post.createdAt || post.updatedAt || post.created_at || post.updated_at || 0).getTime() || 0;
+    }
+
+    function getSectionById(sectionId) {
+      return state.sections.find(function matchSection(section) {
+        return String(section.id) === String(sectionId || '');
+      }) || null;
+    }
+
+    function getCategoryById(categoryId) {
+      return state.categories.find(function matchCategory(category) {
+        return String(category.id) === String(categoryId || '');
+      }) || null;
+    }
+
+    function getSectionLabel(sectionId) {
+      const section = getSectionById(sectionId);
+      return section ? (section.name || section.slug || section.id) : 'No section';
+    }
+
+    function getCategoryLabel(categoryId) {
+      const category = getCategoryById(categoryId);
+      return category ? (category.name || category.slug || category.id) : 'No category';
+    }
+
+    function syncMetrics() {
+      const totalPosts = state.posts.length;
+      const publishedPosts = state.posts.filter(function isPublished(post) {
+        return getPostStatus(post) === 'published';
+      }).length;
+      const draftPosts = totalPosts - publishedPosts;
+      const pinnedPosts = state.posts.filter(function isPinned(post) {
+        return !!post.pinned;
+      }).length;
+
+      document.getElementById('metric-total-posts').textContent = String(totalPosts);
+      document.getElementById('metric-published-posts').textContent = String(publishedPosts);
+      document.getElementById('metric-draft-posts').textContent = String(draftPosts);
+      document.getElementById('metric-pinned-posts').textContent = String(pinnedPosts);
+    }
+
+    function renderFilterOptions() {
+      const sectionOptions = state.sections
+        .slice()
+        .sort(compareByOrderAndName)
+        .map(function renderSection(section) {
+          return '<option value="' + AdminApp.escapeHtml(section.id) + '">' + AdminApp.escapeHtml(section.name || section.slug || section.id) + '</option>';
+        })
+        .join('');
+
+      const categoryOptions = state.categories
+        .slice()
+        .sort(compareByOrderAndName)
+        .map(function renderCategory(category) {
+          return '<option value="' + AdminApp.escapeHtml(category.id) + '">' + AdminApp.escapeHtml(category.name || category.slug || category.id) + '</option>';
+        })
+        .join('');
+
+      elements.sectionFilter.innerHTML = '<option value="">All sections</option>' + sectionOptions;
+      elements.categoryFilter.innerHTML = '<option value="">All categories</option>' + categoryOptions;
+      elements.sectionFilter.value = state.sectionFilter;
+      elements.categoryFilter.value = state.categoryFilter;
+    }
+
+    function getFilteredPosts() {
+      const search = state.search.trim().toLowerCase();
+
+      return state.posts
+        .filter(function filterPost(post) {
+          const status = getPostStatus(post);
+          const categoryIds = resolveCategoryIds(post);
+
+          if (state.statusFilter === 'published' && status !== 'published') {
+            return false;
+          }
+          if (state.statusFilter === 'draft' && status !== 'draft') {
+            return false;
+          }
+          if (state.statusFilter === 'pinned' && !post.pinned) {
+            return false;
+          }
+
+          if (state.sectionFilter && String(post.sectionId || '') !== state.sectionFilter) {
+            return false;
+          }
+
+          if (state.categoryFilter && !categoryIds.includes(state.categoryFilter)) {
+            return false;
+          }
+
+          if (!search) {
+            return true;
+          }
+
+          const haystack = [
+            post.title,
+            post.slug,
+            post.summary,
+            post.content,
+            getSectionLabel(post.sectionId),
+            getCategoryLabel(getPrimaryCategoryId(post)),
+          ].join(' ').toLowerCase();
+
+          return haystack.includes(search);
+        })
+        .sort(function sortPosts(left, right) {
+          if (state.sortBy === 'created') {
+            return getPostCreatedTime(right) - getPostCreatedTime(left);
+          }
+          if (state.sortBy === 'title') {
+            return String(left.title || '').localeCompare(String(right.title || ''));
+          }
+          return getPostUpdatedTime(right) - getPostUpdatedTime(left);
+        });
+    }
+
+    function getPagedPosts() {
+      const filtered = getFilteredPosts();
+      const pageCount = Math.max(1, Math.ceil(filtered.length / state.pageSize));
+      if (state.page > pageCount) {
+        state.page = pageCount;
+      }
+      const start = (state.page - 1) * state.pageSize;
+      return {
+        filtered: filtered,
+        items: filtered.slice(start, start + state.pageSize),
+        start: filtered.length ? start + 1 : 0,
+        end: Math.min(start + state.pageSize, filtered.length),
+        pageCount: pageCount,
+      };
+    }
+
+    function renderList() {
+      const paged = getPagedPosts();
+
+      if (!paged.items.length) {
+        elements.list.innerHTML = `
+          <div class="rounded-2xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+            No posts match the current filters.
+          </div>
+        `;
+      } else {
+        elements.list.innerHTML = paged.items.map(function renderPost(post) {
+          const status = getPostStatus(post);
+          const primaryCategoryId = getPrimaryCategoryId(post);
+          const sectionLabel = getSectionLabel(post.sectionId);
+          const categoryLabel = getCategoryLabel(primaryCategoryId);
+          const summary = String(post.summary || '').trim() || 'No summary.';
+          const updatedLabel = AdminApp.formatDateTime(post.updatedAt || post.updated_at || post.createdAt || post.created_at);
+          const readingTime = Number(post.readingTime) > 0 ? (String(Math.ceil(Number(post.readingTime))) + ' min read') : 'No reading time';
+
+          return `
+            <article class="admin-panel overflow-hidden">
+              <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">${AdminApp.escapeHtml(post.title || post.slug || post.id)}</h2>
+                      <span class="pill ${status === 'published' ? 'status-published' : 'status-draft'}">${status === 'published' ? 'Published' : 'Draft'}</span>
+                      ${post.pinned ? '<span class="pill" style="background: rgba(99, 102, 241, 0.14); color: #6366f1;">Pinned</span>' : ''}
+                    </div>
+                    <div class="mt-2 flex flex-wrap gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      <span>Slug: ${AdminApp.escapeHtml(post.slug || post.id)}</span>
+                      <span>Section: ${AdminApp.escapeHtml(sectionLabel)}</span>
+                      <span>Category: ${AdminApp.escapeHtml(categoryLabel)}</span>
+                    </div>
+                  </div>
+                  <div class="flex shrink-0 flex-wrap items-center gap-2">
+                    <a href="/admin/editor?id=${encodeURIComponent(post.id)}" class="rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">Edit</a>
+                    <button data-action="toggle-status" data-id="${AdminApp.escapeHtml(post.id)}" type="button" class="rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">${status === 'published' ? 'Move to Draft' : 'Publish'}</button>
+                    <button data-action="delete" data-id="${AdminApp.escapeHtml(post.id)}" type="button" class="rounded-xl border border-rose-200 px-3 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-50 dark:border-rose-900/50 dark:text-rose-300 dark:hover:bg-rose-500/10">Delete</button>
+                  </div>
+                </div>
+              </div>
+              <div class="grid gap-4 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+                <div class="text-sm leading-6 text-gray-600 dark:text-gray-300">${AdminApp.escapeHtml(summary)}</div>
+                <div class="grid gap-3">
+                  <div class="rounded-2xl border border-dashed border-gray-200 p-4 dark:border-gray-700">
+                    <div class="text-xs uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">Updated</div>
+                    <div class="mt-2 text-sm font-medium text-gray-900 dark:text-white">${AdminApp.escapeHtml(updatedLabel)}</div>
+                  </div>
+                  <div class="rounded-2xl border border-dashed border-gray-200 p-4 dark:border-gray-700">
+                    <div class="text-xs uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">Reading Time</div>
+                    <div class="mt-2 text-sm font-medium text-gray-900 dark:text-white">${AdminApp.escapeHtml(readingTime)}</div>
+                  </div>
+                </div>
+              </div>
+            </article>
+          `;
+        }).join('');
+      }
+
+      elements.paginationSummary.textContent = paged.filtered.length
+        ? ('Showing ' + paged.start + '-' + paged.end + ' of ' + paged.filtered.length + ' posts. Page ' + state.page + ' of ' + paged.pageCount + '.')
+        : 'No posts to display.';
+      elements.prevPageButton.disabled = state.page <= 1;
+      elements.nextPageButton.disabled = state.page >= paged.pageCount;
+    }
+
+    async function loadData(showMessage) {
+      try {
+        if (showMessage !== false) {
+          layout.setNotice('Loading posts, categories, and sections...', 'info');
+        }
+
+        const [posts, categories, sections] = await Promise.all([
+          AdminApp.requestJson('/api/data/posts'),
+          AdminApp.requestJson('/api/data/categories'),
+          AdminApp.requestJson('/api/data/sections'),
+        ]);
+
+        state.posts = Array.isArray(posts) ? posts : [];
+        state.categories = Array.isArray(categories) ? categories : [];
+        state.sections = Array.isArray(sections) ? sections : [];
+
+        renderFilterOptions();
+        syncMetrics();
+        renderList();
+
+        if (showMessage !== false) {
+          layout.setNotice('Post data loaded.', 'success');
+        }
+      } catch (error) {
+        layout.setNotice(error.message || 'Failed to load post data.', 'error');
+      }
+    }
+
+    async function toggleStatus(postId) {
+      const post = state.posts.find(function matchPost(item) {
+        return String(item.id) === String(postId);
+      });
+
+      if (!post) {
+        return;
+      }
+
+      const nextStatus = getPostStatus(post) === 'published' ? 'draft' : 'published';
+
+      try {
+        layout.setNotice('Updating post status...', 'info');
+        await AdminApp.requestJson('/api/data/posts/' + encodeURIComponent(postId), {
+          method: 'PATCH',
+          body: {
+            status: nextStatus,
+            published: nextStatus === 'published',
+          },
+        });
+        await loadData(false);
+        layout.setNotice('Post status updated.', 'success');
+      } catch (error) {
+        layout.setNotice(error.message || 'Failed to update post status.', 'error');
+      }
+    }
+
+    async function deletePost(postId) {
+      const post = state.posts.find(function matchPost(item) {
+        return String(item.id) === String(postId);
+      });
+
+      if (!post) {
+        return;
+      }
+
+      if (!window.confirm('Delete "' + (post.title || post.slug || post.id) + '"?')) {
+        return;
+      }
+
+      try {
+        layout.setNotice('Deleting post...', 'info');
+        await AdminApp.requestJson('/api/data/posts/' + encodeURIComponent(postId), {
+          method: 'DELETE',
+        });
+        await loadData(false);
+        layout.setNotice('Post deleted.', 'success');
+      } catch (error) {
+        layout.setNotice(error.message || 'Failed to delete post.', 'error');
+      }
+    }
+
+    function resetPageAndRender() {
+      state.page = 1;
+      renderList();
+    }
+
+    document.getElementById('reload-posts-btn').addEventListener('click', function onReload() {
+      loadData(true);
+    });
+
+    elements.searchInput.addEventListener('input', function onSearch() {
+      state.search = elements.searchInput.value || '';
+      resetPageAndRender();
+    });
+
+    elements.statusFilter.addEventListener('change', function onStatusFilter() {
+      state.statusFilter = elements.statusFilter.value || 'all';
+      resetPageAndRender();
+    });
+
+    elements.sectionFilter.addEventListener('change', function onSectionFilter() {
+      state.sectionFilter = elements.sectionFilter.value || '';
+      resetPageAndRender();
+    });
+
+    elements.categoryFilter.addEventListener('change', function onCategoryFilter() {
+      state.categoryFilter = elements.categoryFilter.value || '';
+      resetPageAndRender();
+    });
+
+    elements.sortSelect.addEventListener('change', function onSortChange() {
+      state.sortBy = elements.sortSelect.value || 'updated';
+      resetPageAndRender();
+    });
+
+    elements.pageSizeSelect.addEventListener('change', function onPageSizeChange() {
+      state.pageSize = Number(elements.pageSizeSelect.value) || 10;
+      resetPageAndRender();
+    });
+
+    elements.prevPageButton.addEventListener('click', function onPrevPage() {
+      if (state.page > 1) {
+        state.page -= 1;
+        renderList();
+      }
+    });
+
+    elements.nextPageButton.addEventListener('click', function onNextPage() {
+      const pageCount = Math.max(1, Math.ceil(getFilteredPosts().length / state.pageSize));
+      if (state.page < pageCount) {
+        state.page += 1;
+        renderList();
+      }
+    });
+
+    elements.list.addEventListener('click', function onListClick(event) {
+      const button = event.target.closest('button[data-action][data-id]');
+      if (!button) {
+        return;
+      }
+
+      const action = button.getAttribute('data-action');
+      const postId = button.getAttribute('data-id');
+
+      if (action === 'toggle-status') {
+        toggleStatus(postId);
+        return;
+      }
+
+      if (action === 'delete') {
+        deletePost(postId);
+      }
+    });
+
+    const unsubscribe = AdminApp.subscribeToDataChanges(function onDataChange() {
+      loadData(false);
+    });
+
+    window.addEventListener('beforeunload', unsubscribe);
+
+    loadData(true);
+  </script>
+</body>
+</html>

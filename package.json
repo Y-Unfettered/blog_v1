@@ -1,0 +1,35 @@
+{
+  "name": "my-blog",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "node scripts/lint-project.cjs",
+    "validate:data": "node scripts/validate-data.cjs",
+    "backup:data": "node scripts/backup-data.cjs",
+    "smoke:test": "node scripts/smoke-test.cjs",
+    "check": "node scripts/lint-project.cjs && node scripts/validate-data.cjs && vite build && node scripts/smoke-test.cjs",
+    "init:data": "node scripts/init-data.cjs",
+    "admin:web": "node scripts/admin-server.cjs"
+  },
+  "dependencies": {
+    "@iconify/vue": "^5.0.0",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.3.1",
+    "highlight.js": "^11.9.0",
+    "jsonwebtoken": "^9.0.3",
+    "marked": "^14.0.0",
+    "vue": "^3.4.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.1",
+    "@vitejs/plugin-vue": "^6.0.3",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.1",
+    "vite": "^7.3.1"
+  }
+}

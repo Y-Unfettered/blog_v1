@@ -1,0 +1,986 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文章编辑 - 我的博客</title>
+  <link rel="stylesheet" href="https://unpkg.com/md-editor-v3@2.11.3/lib/style.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/md-editor-v3@2.11.3/lib/md-editor-v3.umd.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+            dark: {
+              100: '#1e293b',
+              200: '#172033',
+              300: '#0f1115',
+              400: '#0a0c10',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #0f1115;
+      color: #e5e7eb;
+    }
+    
+    .editor-textarea {
+      flex: 1;
+      padding: 1.5rem;
+      border: none;
+      resize: none;
+      font-family: 'JetBrains Mono', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 14px;
+      line-height: 1.8;
+      outline: none;
+      min-height: 500px;
+      background-color: #111;
+      color: #e5e7eb;
+    }
+    
+    .editor-textarea::placeholder {
+      color: #6b7280;
+    }
+    
+    .preview-content {
+      padding: 1.5rem;
+      min-height: 500px;
+      color: #e5e7eb;
+      line-height: 1.8;
+    }
+    
+    .preview-content h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: #f9fafb;
+      font-weight: 700;
+      border-bottom: 1px solid #374151;
+      padding-bottom: 0.5rem;
+    }
+    
+    .preview-content h2 {
+      font-size: 1.5rem;
+      margin: 1.5rem 0 1rem;
+      color: #f9fafb;
+      font-weight: 600;
+      border-bottom: 1px solid #374151;
+      padding-bottom: 0.5rem;
+    }
+    
+    .preview-content h3 {
+      font-size: 1.25rem;
+      margin: 1.25rem 0 0.75rem;
+      color: #f9fafb;
+      font-weight: 600;
+    }
+    
+    .preview-content p {
+      margin-bottom: 1rem;
+      color: #d1d5db;
+    }
+    
+    .preview-content ul,
+    .preview-content ol {
+      margin-bottom: 1rem;
+      padding-left: 2rem;
+      color: #d1d5db;
+    }
+    
+    .preview-content li {
+      margin-bottom: 0.5rem;
+    }
+    
+    .preview-content code {
+      background-color: #1f2937;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 0.9em;
+      color: #f472b6;
+    }
+    
+    .preview-content pre {
+      background-color: #1f2937;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin-bottom: 1rem;
+      border: 1px solid #374151;
+    }
+    
+    .preview-content pre code {
+      background-color: transparent;
+      padding: 0;
+      color: #e5e7eb;
+    }
+    
+    .preview-content blockquote {
+      border-left: 4px solid #6366f1;
+      padding-left: 1rem;
+      margin: 1rem 0;
+      color: #9ca3af;
+      font-style: italic;
+      background-color: rgba(99, 102, 241, 0.1);
+      padding: 1rem;
+      border-radius: 0 8px 8px 0;
+    }
+    
+    .preview-content a {
+      color: #818cf8;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    
+    .preview-content a:hover {
+      color: #a5b4fc;
+      text-decoration: underline;
+    }
+    
+    .preview-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    .preview-content th,
+    .preview-content td {
+      border: 1px solid #374151;
+      padding: 0.75rem;
+      text-align: left;
+    }
+    
+    .preview-content th {
+      background-color: #1f2937;
+      font-weight: 600;
+      color: #f9fafb;
+    }
+    
+    .preview-content td {
+      background-color: #111;
+    }
+    
+    .preview-content tr:hover td {
+      background-color: #1f2937;
+    }
+    
+    .preview-content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 1rem 0;
+      border: 1px solid #374151;
+    }
+    
+    .preview-content hr {
+      border: none;
+      border-top: 1px solid #374151;
+      margin: 2rem 0;
+    }
+    
+    .toolbar-btn {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #374151;
+      background-color: #1f2937;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+      color: #d1d5db;
+    }
+    
+    .toolbar-btn:hover {
+      background-color: #374151;
+      border-color: #4b5563;
+      color: #f9fafb;
+    }
+    
+    @media (max-width: 768px) {
+      .editor-container {
+        grid-template-columns: 1fr;
+      }
+      
+      .editor-panel {
+        border-right: none;
+        border-bottom: 1px solid #374151;
+      }
+    }
+    
+    /* 滚动条样式 */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #111;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #374151;
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4b5563;
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <!-- 顶部导航 -->
+  <header class="sticky top-0 z-50 bg-[#0f1115]/95 backdrop-blur-xl border-b border-gray-800">
+    <div class="flex items-center justify-between px-6 h-16">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+          </svg>
+        </div>
+        <h1 class="text-xl font-bold text-white">文章编辑</h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <button onclick="goBack()" class="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+          </svg>
+          返回
+        </button>
+        <button onclick="saveArticle('draft')" class="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          保存草稿
+        </button>
+        <button onclick="saveArticle('published')" class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all transform hover:scale-105">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+          </svg>
+          发布
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-[1600px] mx-auto p-6 pb-0">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 bg-[#111] border border-gray-800 rounded-xl p-6">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase mb-2">标题</label>
+          <input id="post-title" class="w-full bg-gray-900 border border-gray-800 rounded-lg px-4 py-2.5" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase mb-2">Slug</label>
+          <input id="post-slug" class="w-full bg-gray-900 border border-gray-800 rounded-lg px-4 py-2.5 text-gray-300" readonly />
+          <p id="post-slug-status" class="text-xs text-gray-500 mt-2"></p>
+          <p id="post-slug-lock-note" class="text-xs text-amber-400 mt-2 hidden">已发布文章默认锁定 slug，避免旧链接失效</p>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase mb-2">摘要</label>
+          <textarea id="post-summary" class="w-full bg-gray-900 border border-gray-800 rounded-lg px-4 py-2.5" rows="3"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase mb-2">封面 URL</label>
+          <input id="post-cover" class="w-full bg-gray-900 border border-gray-800 rounded-lg px-4 py-2.5" placeholder="https://..." />
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase mb-2">栏目</label>
+          <select id="post-column" class="w-full bg-gray-900 border border-gray-800 rounded-lg px-4 py-2.5">
+            <option value="">请选择栏目</option>
+          </select>
+          <p class="text-xs text-gray-500 mt-2">slug 会按“栏目/分类?id=序号”自动生成</p>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase mb-2">分类（逗号分隔）</label>
+          <input id="post-categories" class="w-full bg-gray-900 border border-gray-800 rounded-lg px-4 py-2.5" placeholder="例如：AI ART, Vue 3.0" />
+          <div id="cat-chips" class="mt-3 flex flex-wrap gap-2"></div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase mb-2">标签（逗号分隔）</label>
+          <input id="post-tags" class="w-full bg-gray-900 border border-gray-800 rounded-lg px-4 py-2.5" placeholder="例如：设计, Vue, 厚涂风" />
+          <div id="tag-chips" class="mt-3 flex flex-wrap gap-2"></div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-2">发布日期</label>
+            <input id="post-created-at" type="date" class="w-full bg-gray-900 border border-gray-800 rounded-lg px-4 py-2.5" />
+          </div>
+          <div class="flex items-end">
+            <label class="flex items-center space-x-2 text-sm text-gray-400">
+              <input id="post-pinned" type="checkbox" class="w-4 h-4 rounded bg-gray-900 border-gray-800 text-indigo-600" />
+              <span>置顶</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑器容器 -->
+  <div class="max-w-[1600px] mx-auto p-6">
+    <div class="bg-[#111] border border-gray-800 rounded-xl overflow-hidden shadow-2xl">
+      <div class="px-4 py-3 bg-[#0a0c10] border-b border-gray-800">
+        <span class="text-sm font-medium text-gray-400">Markdown 编辑</span>
+      </div>
+      <div class="p-4">
+        <div id="md-editor" class="w-full bg-gray-900 border border-gray-800 rounded-lg overflow-hidden"></div>
+        <textarea id="post-content" class="hidden w-full min-h-[560px] bg-gray-900 border border-gray-800 rounded-lg p-4 mt-3" placeholder="在这里输入 Markdown 内容..."></textarea>
+      </div>
+    </div>
+  </div>
+
+    <script>
+    let mdEditorApp = null;
+    let mdEditorContent = '';
+    const postContentFallback = document.getElementById('post-content');
+
+    const postTitleInput = document.getElementById('post-title');
+    const postSlugInput = document.getElementById('post-slug');
+    const postSlugStatus = document.getElementById('post-slug-status');
+    const postSlugLockNote = document.getElementById('post-slug-lock-note');
+    const postSummaryInput = document.getElementById('post-summary');
+    const postCoverInput = document.getElementById('post-cover');
+    const postColumnSelect = document.getElementById('post-column');
+    const postCategoriesInput = document.getElementById('post-categories');
+    const postTagsInput = document.getElementById('post-tags');
+    const catChips = document.getElementById('cat-chips');
+    const tagChips = document.getElementById('tag-chips');
+    const postCreatedAtInput = document.getElementById('post-created-at');
+    const postPinnedInput = document.getElementById('post-pinned');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const articleId = urlParams.get('id');
+    const token = localStorage.getItem('token');
+
+    let posts = [];
+    let categories = [];
+    let tags = [];
+    let navItems = [];
+    let currentPost = null;
+    let slugLocked = false;
+    let categoriesDirty = false;
+    let tagsDirty = false;
+
+    if (!token) {
+      window.location.href = '/admin';
+    }
+
+    function todayISO() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function slugify(input) {
+      return String(input || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    }
+
+    function parseCsv(input) {
+      const values = String(input || '')
+        .split(/[,，]/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+      return Array.from(new Set(values));
+    }
+
+    function parseSlugIndex(slug) {
+      const matched = /[?&]id=(\d+)/.exec(String(slug || ''));
+      if (!matched) return null;
+      const num = Number(matched[1]);
+      return Number.isFinite(num) && num > 0 ? num : null;
+    }
+
+    function escapeHtml(input) {
+      return String(input || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function normalizeNavItem(raw) {
+      const item = raw || {};
+      return {
+        ...item,
+        id: item.id || `nav-${Date.now()}`,
+        label: String(item.label || item.name || '').trim(),
+        href: String(item.href || item.url || '').trim(),
+      };
+    }
+
+    function normalizeCategory(raw) {
+      const item = raw || {};
+      const name = String(item.name || '').trim();
+      return {
+        ...item,
+        id: item.id || `cat-${Date.now()}`,
+        name,
+        slug: String(item.slug || slugify(name) || item.id || '').trim(),
+        parent: String(item.parent || '').trim(),
+      };
+    }
+
+    function normalizeTag(raw) {
+      const item = raw || {};
+      const name = String(item.name || '').trim();
+      return {
+        ...item,
+        id: item.id || `tag-${Date.now()}`,
+        name,
+        slug: String(item.slug || slugify(name) || item.id || '').trim(),
+        parent: String(item.parent || '').trim(),
+      };
+    }
+
+    function normalizePost(raw) {
+      const source = raw || {};
+      const categoriesValue = Array.isArray(source.categories)
+        ? source.categories
+        : (Array.isArray(source.categoryIds) ? source.categoryIds : []);
+      const tagsValue = Array.isArray(source.tags)
+        ? source.tags
+        : (Array.isArray(source.tagIds) ? source.tagIds : []);
+      return {
+        ...source,
+        id: source.id || `post-${Date.now()}`,
+        title: source.title || '',
+        slug: source.slug || '',
+        summary: source.summary || '',
+        cover: source.cover || '',
+        content: source.content || '',
+        categories: categoriesValue,
+        tags: tagsValue,
+        created_at: source.created_at || source.createdAt || todayISO(),
+        updated_at: source.updated_at || source.updatedAt || todayISO(),
+        status: source.status === 'published' || source.published === true ? 'published' : 'draft',
+        pinned: source.pinned === true,
+      };
+    }
+
+    function sanitizePreviewHtml(unsafeHtml) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(`<div id="md-root">${unsafeHtml}</div>`, 'text/html');
+      const root = doc.getElementById('md-root');
+      if (!root) return '';
+
+      const blockedTags = ['script', 'iframe', 'object', 'embed', 'link', 'meta', 'style', 'form', 'input', 'button', 'textarea', 'select'];
+      blockedTags.forEach((tag) => {
+        root.querySelectorAll(tag).forEach((node) => node.remove());
+      });
+
+      root.querySelectorAll('*').forEach((el) => {
+        Array.from(el.attributes).forEach((attr) => {
+          const name = attr.name.toLowerCase();
+          const value = String(attr.value || '').trim().toLowerCase();
+          const isEventHandler = name.startsWith('on');
+          const isUnsafeUrl = (name === 'href' || name === 'src' || name === 'xlink:href')
+            && (value.startsWith('javascript:') || value.startsWith('data:text/html'));
+          if (isEventHandler || isUnsafeUrl) {
+            el.removeAttribute(attr.name);
+          }
+        });
+      });
+      return root.innerHTML;
+    }
+
+    function mountMdEditor(initialContent) {
+      mdEditorContent = String(initialContent || '');
+      if (postContentFallback) {
+        postContentFallback.value = mdEditorContent;
+      }
+
+      if (!window.Vue || !window.MdEditorV3) {
+        if (postContentFallback) {
+          postContentFallback.classList.remove('hidden');
+        }
+        return;
+      }
+
+      const root = document.getElementById('md-editor');
+      if (!root) return;
+
+      if (postContentFallback) {
+        postContentFallback.classList.add('hidden');
+      }
+
+      if (mdEditorApp) {
+        mdEditorApp.unmount();
+        mdEditorApp = null;
+      }
+
+      const MdEditor = window.MdEditorV3.MdEditor || window.MdEditorV3;
+      if (!MdEditor) {
+        if (postContentFallback) {
+          postContentFallback.classList.remove('hidden');
+        }
+        return;
+      }
+
+      const { createApp, ref, watch } = window.Vue;
+      mdEditorApp = createApp({
+        setup() {
+          const text = ref(mdEditorContent);
+          watch(text, (value) => {
+            mdEditorContent = String(value || '');
+            if (postContentFallback) {
+              postContentFallback.value = mdEditorContent;
+            }
+          });
+          return { text };
+        },
+        template: '<MdEditor v-model="text" theme="dark" previewTheme="default" :sanitize="sanitize" style="height: 640px;" />',
+        data() {
+          return {
+            sanitize: sanitizePreviewHtml,
+          };
+        },
+      });
+      mdEditorApp.component('MdEditor', MdEditor);
+      mdEditorApp.mount(root);
+    }
+
+    function getColumnLabels() {
+      const labelsFromNav = navItems
+        .map((item) => String(item.label || '').trim())
+        .filter((label) => label && label !== '首页');
+
+      if (labelsFromNav.length) {
+        return Array.from(new Set(labelsFromNav));
+      }
+
+      const labelsFromCategory = categories
+        .map((item) => String(item.parent || '').trim())
+        .filter(Boolean);
+
+      if (labelsFromCategory.length) {
+        return Array.from(new Set(labelsFromCategory));
+      }
+
+      return ['默认栏目'];
+    }
+
+    function renderColumnOptions(selectedLabel) {
+      const labels = getColumnLabels();
+      postColumnSelect.innerHTML = [
+        '<option value="">请选择栏目</option>',
+        ...labels.map((label) => `<option value="${label}">${label}</option>`),
+      ].join('');
+      if (selectedLabel) {
+        postColumnSelect.value = selectedLabel;
+      }
+    }
+
+    function resolveCategoryFromValue(value) {
+      const key = String(value || '').trim();
+      if (!key) return null;
+      return categories.find((item) =>
+        item.id === key
+        || item.name === key
+        || item.slug === key
+      ) || null;
+    }
+
+    function resolveTagFromValue(value) {
+      const key = String(value || '').trim();
+      if (!key) return null;
+      return tags.find((item) =>
+        item.id === key
+        || item.name === key
+        || item.slug === key
+      ) || null;
+    }
+
+    function ensureCategory(name, columnLabel) {
+      let category = resolveCategoryFromValue(name);
+      if (category) {
+        if (columnLabel && !category.parent) {
+          category.parent = columnLabel;
+          categoriesDirty = true;
+        }
+        return category;
+      }
+
+      category = normalizeCategory({
+        id: `cat-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        name,
+        slug: slugify(name),
+        parent: columnLabel || '',
+        color: '#6366f1',
+      });
+      categories.push(category);
+      categoriesDirty = true;
+      return category;
+    }
+
+    function ensureTag(name, columnLabel) {
+      let tag = resolveTagFromValue(name);
+      if (tag) {
+        if (columnLabel && !tag.parent) {
+          tag.parent = columnLabel;
+          tagsDirty = true;
+        }
+        return tag;
+      }
+
+      tag = normalizeTag({
+        id: `tag-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        name,
+        slug: slugify(name),
+        parent: columnLabel || '',
+      });
+      tags.push(tag);
+      tagsDirty = true;
+      return tag;
+    }
+
+    function findColumnFromPost(post) {
+      if (!post) return '';
+      const firstCategoryId = Array.isArray(post.categories) ? post.categories[0] : '';
+      const firstCategory = resolveCategoryFromValue(firstCategoryId);
+      if (firstCategory && firstCategory.parent) return firstCategory.parent;
+
+      const firstSegment = String(post.slug || '').split('/')[0] || '';
+      if (!firstSegment) return '';
+      const bySlug = getColumnLabels().find((label) => slugify(label) === firstSegment);
+      return bySlug || '';
+    }
+
+    function buildColumnCategoryIndex(columnLabel, categoryId, currentId) {
+      if (!columnLabel || !categoryId) return 1;
+      const list = posts
+        .filter((item) => String(item.id) !== String(currentId))
+        .filter((item) => Array.isArray(item.categories) && item.categories.includes(categoryId))
+        .slice()
+        .sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
+      return list.length + 1;
+    }
+
+    function setSlugStatus(text, kind) {
+      postSlugStatus.textContent = text;
+      postSlugStatus.className = 'text-xs mt-2';
+      if (kind === 'ok') {
+        postSlugStatus.classList.add('text-emerald-400');
+      } else if (kind === 'warn') {
+        postSlugStatus.classList.add('text-amber-400');
+      } else {
+        postSlugStatus.classList.add('text-gray-500');
+      }
+    }
+
+    function renderInputChips(container, items, selectedValues, onToggle) {
+      if (!container) return;
+      if (!items.length) {
+        container.innerHTML = '';
+        return;
+      }
+      const selectedSet = new Set(selectedValues);
+      container.innerHTML = items.map((item) => {
+        const active = selectedSet.has(item.name);
+        return `
+          <button
+            type="button"
+            data-chip="${escapeHtml(item.name)}"
+            class="px-3 py-1.5 rounded-full text-xs border transition-all ${active
+              ? 'bg-indigo-500/20 border-indigo-500/60 text-indigo-200'
+              : 'bg-gray-900 border-gray-700 text-gray-400 hover:border-indigo-500/60 hover:text-gray-200'}"
+          >
+            ${escapeHtml(item.name)}
+          </button>
+        `;
+      }).join('');
+
+      container.querySelectorAll('button[data-chip]').forEach((btn) => {
+        btn.addEventListener('click', () => onToggle(btn.getAttribute('data-chip') || ''));
+      });
+    }
+
+    function updateChips() {
+      const columnLabel = String(postColumnSelect.value || '').trim();
+      const selectedCategories = parseCsv(postCategoriesInput.value);
+      const selectedTags = parseCsv(postTagsInput.value);
+
+      const categoryItems = categories.filter((item) => !columnLabel || !item.parent || item.parent === columnLabel);
+      const tagItems = tags.filter((item) => !columnLabel || !item.parent || item.parent === columnLabel);
+
+      renderInputChips(catChips, categoryItems.slice(0, 12), selectedCategories, (name) => {
+        const next = new Set(parseCsv(postCategoriesInput.value));
+        if (next.has(name)) next.delete(name);
+        else next.add(name);
+        postCategoriesInput.value = Array.from(next).join(', ');
+        updateSlug();
+        updateChips();
+      });
+
+      renderInputChips(tagChips, tagItems.slice(0, 16), selectedTags, (name) => {
+        const next = new Set(parseCsv(postTagsInput.value));
+        if (next.has(name)) next.delete(name);
+        else next.add(name);
+        postTagsInput.value = Array.from(next).join(', ');
+        updateChips();
+      });
+    }
+
+    function updateSlug() {
+      if (slugLocked && currentPost) {
+        postSlugInput.value = currentPost.slug || '';
+        setSlugStatus(`已锁定：${postSlugInput.value || '-'}`, 'ok');
+        return;
+      }
+
+      const columnLabel = String(postColumnSelect.value || '').trim();
+      const categoryValues = parseCsv(postCategoriesInput.value);
+      const firstCategoryValue = categoryValues[0] || '';
+
+      if (!columnLabel) {
+        postSlugInput.value = '';
+        setSlugStatus('请先选择栏目', 'warn');
+        return;
+      }
+
+      if (!firstCategoryValue) {
+        postSlugInput.value = '';
+        setSlugStatus('请先填写分类（至少一个）', 'warn');
+        return;
+      }
+
+      const category = resolveCategoryFromValue(firstCategoryValue) || normalizeCategory({
+        name: firstCategoryValue,
+        slug: slugify(firstCategoryValue),
+      });
+
+      const columnSlug = slugify(columnLabel) || 'column';
+      const categorySlug = category.slug || slugify(category.name) || 'category';
+      const reusedIndex = currentPost ? parseSlugIndex(currentPost.slug) : null;
+      const index = reusedIndex || (category.id
+        ? buildColumnCategoryIndex(columnLabel, category.id, currentPost?.id)
+        : 1);
+
+      const next = `${columnSlug}/${categorySlug}?id=${index}`;
+      postSlugInput.value = next;
+      setSlugStatus(`自动生成：${next}`, 'ok');
+    }
+
+    async function fetchDataList(type) {
+      const response = await fetch(`/api/data/${type}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/admin';
+        return [];
+      }
+      if (!response.ok) {
+        throw new Error(`load ${type} failed: ${response.status}`);
+      }
+      const payload = await response.json();
+      if (Array.isArray(payload)) return payload;
+      if (payload && Array.isArray(payload[type])) return payload[type];
+      return [];
+    }
+
+    async function saveDataList(type, list) {
+      const response = await fetch(`/api/data/${type}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(list),
+      });
+      if (!response.ok) {
+        const message = await response.text().catch(() => '');
+        throw new Error(`save ${type} failed: ${response.status} ${message}`);
+      }
+    }
+
+    async function initPage() {
+      try {
+        const [rawPosts, rawCategories, rawTags, rawNav] = await Promise.all([
+          fetchDataList('posts'),
+          fetchDataList('categories'),
+          fetchDataList('tags'),
+          fetchDataList('nav'),
+        ]);
+
+        posts = (rawPosts || []).map(normalizePost);
+        categories = (rawCategories || []).map(normalizeCategory);
+        tags = (rawTags || []).map(normalizeTag);
+        navItems = (rawNav || []).map(normalizeNavItem);
+
+        postCreatedAtInput.value = todayISO();
+        renderColumnOptions('');
+
+        if (articleId) {
+          currentPost = posts.find((item) => String(item.id) === String(articleId)) || null;
+        }
+
+        let initialContent = `# 新文章标题\n\n在这里开始写你的文章内容。\n`;
+        if (currentPost) {
+          postTitleInput.value = currentPost.title || '';
+          postSummaryInput.value = currentPost.summary || '';
+          postCoverInput.value = currentPost.cover || '';
+          postCreatedAtInput.value = currentPost.created_at || todayISO();
+          postPinnedInput.checked = currentPost.pinned === true;
+
+          const categoryNames = (currentPost.categories || [])
+            .map((id) => resolveCategoryFromValue(id)?.name || id)
+            .filter(Boolean);
+          const tagNames = (currentPost.tags || [])
+            .map((id) => resolveTagFromValue(id)?.name || id)
+            .filter(Boolean);
+          postCategoriesInput.value = categoryNames.join(', ');
+          postTagsInput.value = tagNames.join(', ');
+
+          const columnLabel = findColumnFromPost(currentPost);
+          renderColumnOptions(columnLabel);
+
+          slugLocked = currentPost.status === 'published';
+          postSlugLockNote.classList.toggle('hidden', !slugLocked);
+          postSlugInput.value = currentPost.slug || '';
+          initialContent = currentPost.content || '';
+        } else {
+          if (articleId) {
+            alert('未找到文章，已切换到新建模式');
+          }
+        }
+
+        updateSlug();
+        updateChips();
+        mountMdEditor(initialContent);
+      } catch (error) {
+        console.error(error);
+        alert('初始化编辑器失败，请确认后端服务已启动');
+      }
+    }
+
+    function goBack() {
+      window.location.href = '/admin/dashboard';
+    }
+
+    async function saveArticle(targetStatus) {
+      const columnLabel = String(postColumnSelect.value || '').trim();
+      const title = String(postTitleInput.value || '').trim();
+      const summary = String(postSummaryInput.value || '').trim();
+      const cover = String(postCoverInput.value || '').trim();
+      const content = String(mdEditorContent || postContentFallback?.value || '').trim();
+      const createdAt = String(postCreatedAtInput.value || '').trim() || todayISO();
+      const pinned = postPinnedInput.checked;
+
+      const categoryValues = parseCsv(postCategoriesInput.value);
+      const tagValues = parseCsv(postTagsInput.value);
+
+      if (!title || !summary || !content) {
+        alert('标题、摘要、正文为必填');
+        return;
+      }
+      if (!columnLabel) {
+        alert('请选择栏目');
+        return;
+      }
+      if (!categoryValues.length) {
+        alert('请至少填写一个分类');
+        return;
+      }
+
+      categoriesDirty = false;
+      tagsDirty = false;
+
+      const categoryIds = categoryValues.map((name) => ensureCategory(name, columnLabel).id);
+      const tagIds = tagValues.map((name) => ensureTag(name, columnLabel).id);
+
+      postCategoriesInput.value = categoryIds
+        .map((id) => resolveCategoryFromValue(id)?.name || id)
+        .join(', ');
+      postTagsInput.value = tagIds
+        .map((id) => resolveTagFromValue(id)?.name || id)
+        .join(', ');
+
+      updateSlug();
+      updateChips();
+      const slug = String(postSlugInput.value || '').trim();
+      if (!slug) {
+        alert('slug 生成失败，请检查栏目和分类');
+        return;
+      }
+
+      const now = todayISO();
+      const index = posts.findIndex((item) => String(item.id) === String(articleId));
+      const source = index >= 0 ? normalizePost(posts[index]) : null;
+
+      const next = {
+        ...(source || {}),
+        id: source?.id || `post-${Date.now()}`,
+        title,
+        slug,
+        summary,
+        cover: cover || '',
+        categories: categoryIds,
+        tags: tagIds,
+        categoryIds: categoryIds,
+        tagIds: tagIds,
+        created_at: source?.created_at || createdAt,
+        updated_at: now,
+        createdAt: source?.createdAt || createdAt,
+        updatedAt: now,
+        status: targetStatus === 'published' ? 'published' : 'draft',
+        published: targetStatus === 'published',
+        pinned,
+        content,
+      };
+
+      try {
+        if (index >= 0) posts[index] = next;
+        else posts.unshift(next);
+
+        if (categoriesDirty) await saveDataList('categories', categories);
+        if (tagsDirty) await saveDataList('tags', tags);
+        await saveDataList('posts', posts);
+
+        alert(targetStatus === 'published' ? '文章已发布' : '草稿已保存');
+        window.location.href = '/admin/dashboard';
+      } catch (error) {
+        console.error(error);
+        alert('保存失败，请检查后端服务状态');
+      }
+    }
+
+    if (postContentFallback) {
+      postContentFallback.addEventListener('input', () => {
+        mdEditorContent = String(postContentFallback.value || '');
+      });
+    }
+    postColumnSelect.addEventListener('change', () => {
+      updateSlug();
+      updateChips();
+    });
+    postCategoriesInput.addEventListener('input', () => {
+      updateSlug();
+      updateChips();
+    });
+    postTagsInput.addEventListener('input', updateChips);
+
+    initPage();
+  </script>
+</body>
+</html>
+
+

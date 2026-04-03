@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevLog Categories</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+            dark: {
+              bg: '#0a0a0a',
+              surface: '#111111',
+              border: '#1f1f1f',
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="/admin/admin-common.css">
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-[#0a0a0a] dark:text-gray-100">
+  <div id="admin-app"></div>
+
+  <script src="/admin/admin-common.js"></script>
+  <script>
+    if (!window.AdminApp || !AdminApp.requireAuth()) {
+      throw new Error('Missing admin auth context.');
+    }
+
+    const layout = AdminApp.mountPage({
+      active: 'categories',
+      title: 'Category Management',
+      description: 'Manage category metadata, section mapping, and usage from one page. Deletion is blocked while a category is still linked to posts.',
+      actions: [
+        {
+          id: 'reload-categories-btn',
+          label: 'Reload',
+          className: 'rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800',
+        },
+        {
+          id: 'create-category-btn',
+          label: 'New Category',
+          className: 'rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-colors hover:bg-indigo-700',
+        },
+      ],
+    });
+
+    layout.content.innerHTML = `
+      <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <article class="admin-panel metric-card p-5">
+          <div class="text-sm text-gray-500 dark:text-gray-400">Total Categories</div>
+          <div id="metric-total-categories" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
+          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">All category records currently stored.</div>
+        </article>
+        <article class="admin-panel metric-card p-5">
+          <div class="text-sm text-gray-500 dark:text-gray-400">Used Categories</div>
+          <div id="metric-used-categories" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
+          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">Categories referenced by at least one post.</div>
+        </article>
+        <article class="admin-panel metric-card p-5">
+          <div class="text-sm text-gray-500 dark:text-gray-400">Unused Categories</div>
+          <div id="metric-unused-categories" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
+          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">Safe candidates for cleanup or reassignment.</div>
+        </article>
+        <article class="admin-panel metric-card p-5">
+          <div class="text-sm text-gray-500 dark:text-gray-400">Linked Sections</div>
+          <div id="metric-linked-sections" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
+          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">Unique sections referenced by categories.</div>
+        </article>
+      </section>
+
+      <section class="admin-panel mt-6 p-6">
+        <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_220px_220px]">
+          <div>
+            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="category-search-input">Search</label>
+            <input id="category-search-input" class="input-control" type="search" placeholder="Search by name, slug, icon, or description">
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="category-section-filter">Section</label>
+            <select id="category-section-filter" class="select-control">
+              <option value="">All sections</option>
+            </select>
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="category-usage-filter">Usage</label>
+            <select id="category-usage-filter" class="select-control">
+              <option value="all">All categories</option>
+              <option value="used">Used only</option>
+              <option value="unused">Unused only</option>
+            </select>
+          </div>
+        </div>
+        <div id="category-list" class="mt-6 grid gap-4 xl:grid-cols-2"></div>
+      </section>
+
+      <div id="category-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm">
+        <div class="admin-panel w-full max-w-2xl p-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div class="admin-kicker text-gray-500 dark:text-gray-400">Category Editor</div>
+              <h2 id="category-modal-title" class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">Create Category</h2>
+            </div>
+            <button id="category-modal-close" type="button" class="rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">Close</button>
+          </div>
+          <form id="category-form" class="mt-6 grid gap-4" novalidate>
+            <div class="grid gap-4 md:grid-cols-2">
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="category-name-input">Name</label>
+                <input id="category-name-input" class="input-control" type="text" maxlength="80" required>
+              </div>
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="category-slug-input">Slug</label>
+                <input id="category-slug-input" class="input-control" type="text" maxlength="120" required>
+              </div>
+            </div>
+            <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_140px]">
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="category-section-input">Section</label>
+                <select id="category-section-input" class="select-control">
+                  <option value="">No section</option>
+                </select>
+              </div>
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="category-order-input">Order</label>
+                <input id="category-order-input" class="input-control" type="number" min="1" step="1">
+              </div>
+            </div>
+            <div class="grid gap-4 md:grid-cols-[160px_minmax(0,1fr)]">
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="category-color-input">Color</label>
+                <input id="category-color-input" class="input-control h-[52px] px-2" type="color" value="#6366f1">
+              </div>
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="category-icon-input">Icon</label>
+                <input id="category-icon-input" class="input-control" type="text" maxlength="60" placeholder="folder, code, brush">
+              </div>
+            </div>
+            <div class="rounded-2xl border border-dashed border-gray-200 p-4 dark:border-gray-700">
+              <div class="text-sm font-medium text-gray-700 dark:text-gray-300">Preview</div>
+              <div class="mt-3 flex items-center gap-3">
+                <span id="category-preview-dot" class="h-3 w-3 rounded-full" style="background: #6366f1;"></span>
+                <span id="category-preview-pill" class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium" style="background: rgba(99, 102, 241, 0.14); color: #6366f1;">
+                  <span id="category-preview-name">New Category</span>
+                </span>
+                <span id="category-preview-icon" class="text-sm text-gray-500 dark:text-gray-400">icon: none</span>
+              </div>
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="category-description-input">Description</label>
+              <textarea id="category-description-input" class="textarea-control" rows="4" maxlength="240" placeholder="Internal description shown to editors."></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+              <button id="category-delete-btn" type="button" class="hidden rounded-xl border border-rose-200 px-4 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-50 dark:border-rose-900/50 dark:text-rose-300 dark:hover:bg-rose-500/10">Delete</button>
+              <button type="submit" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-colors hover:bg-indigo-700">Save Category</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    const state = {
+      categories: [],
+      sections: [],
+      posts: [],
+      editingId: '',
+      slugTouched: false,
+      search: '',
+      sectionFilter: '',
+      usageFilter: 'all',
+      usageMap: new Map(),
+    };
+
+    const elements = {
+      searchInput: document.getElementById('category-search-input'),
+      sectionFilter: document.getElementById('category-section-filter'),
+      usageFilter: document.getElementById('category-usage-filter'),
+      list: document.getElementById('category-list'),
+      modal: document.getElementById('category-modal'),
+      modalTitle: document.getElementById('category-modal-title'),
+      closeModalButton: document.getElementById('category-modal-close'),
+      form: document.getElementById('category-form'),
+      nameInput: document.getElementById('category-name-input'),
+      slugInput: document.getElementById('category-slug-input'),
+      sectionInput: document.getElementById('category-section-input'),
+      orderInput: document.getElementById('category-order-input'),
+      colorInput: document.getElementById('category-color-input'),
+      iconInput: document.getElementById('category-icon-input'),
+      descriptionInput: document.getElementById('category-description-input'),
+      deleteButton: document.getElementById('category-delete-btn'),
+      previewDot: document.getElementById('category-preview-dot'),
+      previewPill: document.getElementById('category-preview-pill'),
+      previewName: document.getElementById('category-preview-name'),
+      previewIcon: document.getElementById('category-preview-icon'),
+    };
+
+    function slugify(value) {
+      const normalized = String(value || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\u4e00-\u9fff]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      return normalized || ('category-' + Date.now());
+    }
+
+    function normalizeColor(value) {
+      const color = String(value || '').trim();
+      return /^#[0-9a-f]{6}$/i.test(color) ? color : '#6366f1';
+    }
+
+    function hexToRgba(color, alpha) {
+      const value = normalizeColor(color).slice(1);
+      const red = parseInt(value.slice(0, 2), 16);
+      const green = parseInt(value.slice(2, 4), 16);
+      const blue = parseInt(value.slice(4, 6), 16);
+      return 'rgba(' + red + ', ' + green + ', ' + blue + ', ' + alpha + ')';
+    }
+
+    function compareByOrderAndName(left, right) {
+      const orderDiff = (Number(left.order) || 0) - (Number(right.order) || 0);
+      if (orderDiff !== 0) {
+        return orderDiff;
+      }
+      return String(left.name || '').localeCompare(String(right.name || ''));
+    }
+
+    function resolvePostCategories(post) {
+      if (Array.isArray(post.categories)) {
+        return post.categories;
+      }
+      if (Array.isArray(post.categoryIds)) {
+        return post.categoryIds;
+      }
+      if (post.categoryId) {
+        return [post.categoryId];
+      }
+      return [];
+    }
+
+    function buildUsageMap(posts) {
+      const usage = new Map();
+      (Array.isArray(posts) ? posts : []).forEach(function eachPost(post) {
+        resolvePostCategories(post).forEach(function eachCategory(categoryId) {
+          const key = String(categoryId);
+          usage.set(key, (usage.get(key) || 0) + 1);
+        });
+      });
+      return usage;
+    }
+
+    function getUsage(categoryId) {
+      return state.usageMap.get(String(categoryId)) || 0;
+    }
+
+    function getSectionById(sectionId) {
+      return state.sections.find(function matchSection(section) {
+        return String(section.id) === String(sectionId || '');
+      }) || null;
+    }
+
+    function getSectionLabel(sectionId) {
+      const section = getSectionById(sectionId);
+      if (!section) {
+        return 'No section';
+      }
+      return section.name || section.slug || section.id;
+    }
+
+    function syncMetrics() {
+      const totalCategories = state.categories.length;
+      const usedCategories = state.categories.filter(function isUsed(category) {
+        return getUsage(category.id) > 0;
+      }).length;
+      const linkedSectionIds = new Set(
+        state.categories
+          .map(function mapSection(category) {
+            return String(category.sectionId || '').trim();
+          })
+          .filter(Boolean)
+      );
+
+      document.getElementById('metric-total-categories').textContent = String(totalCategories);
+      document.getElementById('metric-used-categories').textContent = String(usedCategories);
+      document.getElementById('metric-unused-categories').textContent = String(Math.max(0, totalCategories - usedCategories));
+      document.getElementById('metric-linked-sections').textContent = String(linkedSectionIds.size);
+    }
+
+    function renderSectionOptions() {
+      const sortedSections = state.sections.slice().sort(compareByOrderAndName);
+      const optionsHtml = sortedSections.map(function renderOption(section) {
+        const label = AdminApp.escapeHtml(section.name || section.slug || section.id);
+        const value = AdminApp.escapeHtml(section.id);
+        return '<option value="' + value + '">' + label + '</option>';
+      }).join('');
+
+      elements.sectionFilter.innerHTML = '<option value="">All sections</option>' + optionsHtml;
+      elements.sectionInput.innerHTML = '<option value="">No section</option>' + optionsHtml;
+      elements.sectionFilter.value = state.sectionFilter;
+    }
+
+    function getFilteredCategories() {
+      const search = state.search.trim().toLowerCase();
+      return state.categories
+        .filter(function filterCategory(category) {
+          if (state.sectionFilter && String(category.sectionId || '') !== state.sectionFilter) {
+            return false;
+          }
+
+          const usage = getUsage(category.id);
+          if (state.usageFilter === 'used' && usage === 0) {
+            return false;
+          }
+          if (state.usageFilter === 'unused' && usage > 0) {
+            return false;
+          }
+
+          if (!search) {
+            return true;
+          }
+
+          const haystack = [
+            category.name,
+            category.slug,
+            category.description,
+            category.icon,
+            getSectionLabel(category.sectionId),
+          ].join(' ').toLowerCase();
+
+          return haystack.includes(search);
+        })
+        .sort(compareByOrderAndName);
+    }
+
+    function renderList() {
+      const categories = getFilteredCategories();
+
+      if (!categories.length) {
+        elements.list.innerHTML = `
+          <div class="rounded-2xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400 xl:col-span-2">
+            No categories match the current filters.
+          </div>
+        `;
+        return;
+      }
+
+      elements.list.innerHTML = categories.map(function renderCategory(category) {
+        const usage = getUsage(category.id);
+        const color = normalizeColor(category.color);
+        const section = getSectionById(category.sectionId);
+        const sectionLabel = section ? (section.name || section.slug || section.id) : 'No section';
+        const description = String(category.description || '').trim() || 'No description.';
+        const iconLabel = String(category.icon || '').trim() || 'none';
+
+        return `
+          <article class="admin-panel overflow-hidden">
+            <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800">
+              <div class="flex items-start justify-between gap-4">
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="h-3 w-3 rounded-full" style="background: ${color};"></span>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">${AdminApp.escapeHtml(category.name || category.slug || category.id)}</h2>
+                    <span class="pill" style="background: ${hexToRgba(color, 0.14)}; color: ${color};">${AdminApp.escapeHtml(category.slug || category.id)}</span>
+                  </div>
+                  <div class="mt-2 flex flex-wrap gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <span>Section: ${AdminApp.escapeHtml(sectionLabel)}</span>
+                    <span>Icon: ${AdminApp.escapeHtml(iconLabel)}</span>
+                    <span>Order: ${AdminApp.escapeHtml(category.order || '--')}</span>
+                  </div>
+                </div>
+                <div class="flex shrink-0 items-center gap-2">
+                  <button data-action="edit" data-id="${AdminApp.escapeHtml(category.id)}" type="button" class="rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">Edit</button>
+                  <button data-action="delete" data-id="${AdminApp.escapeHtml(category.id)}" type="button" class="rounded-xl border border-rose-200 px-3 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-50 dark:border-rose-900/50 dark:text-rose-300 dark:hover:bg-rose-500/10">Delete</button>
+                </div>
+              </div>
+            </div>
+            <div class="grid gap-4 px-5 py-4 md:grid-cols-[minmax(0,1fr)_180px]">
+              <div class="text-sm leading-6 text-gray-600 dark:text-gray-300">${AdminApp.escapeHtml(description)}</div>
+              <div class="rounded-2xl border border-dashed border-gray-200 p-4 dark:border-gray-700">
+                <div class="text-xs uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">Usage</div>
+                <div class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">${usage}</div>
+                <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">${usage > 0 ? 'Linked posts block deletion.' : 'Safe to delete.'}</div>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function updatePreview() {
+      const color = normalizeColor(elements.colorInput.value);
+      const name = String(elements.nameInput.value || '').trim() || 'New Category';
+      const icon = String(elements.iconInput.value || '').trim() || 'none';
+
+      elements.previewDot.style.background = color;
+      elements.previewPill.style.background = hexToRgba(color, 0.14);
+      elements.previewPill.style.color = color;
+      elements.previewName.textContent = name;
+      elements.previewIcon.textContent = 'icon: ' + icon;
+    }
+
+    function openModal(category) {
+      const isEditing = !!category;
+      state.editingId = isEditing ? String(category.id) : '';
+      state.slugTouched = false;
+
+      elements.modalTitle.textContent = isEditing ? 'Edit Category' : 'Create Category';
+      elements.nameInput.value = isEditing ? (category.name || '') : '';
+      elements.slugInput.value = isEditing ? (category.slug || '') : '';
+      elements.sectionInput.value = isEditing ? String(category.sectionId || '') : '';
+      elements.orderInput.value = isEditing ? String(category.order || '') : '';
+      elements.colorInput.value = normalizeColor(isEditing ? category.color : '#6366f1');
+      elements.iconInput.value = isEditing ? (category.icon || '') : '';
+      elements.descriptionInput.value = isEditing ? (category.description || '') : '';
+      elements.deleteButton.classList.toggle('hidden', !isEditing);
+      updatePreview();
+
+      elements.modal.classList.remove('hidden');
+      elements.modal.classList.add('flex');
+      elements.nameInput.focus();
+    }
+
+    function closeModal() {
+      state.editingId = '';
+      elements.modal.classList.add('hidden');
+      elements.modal.classList.remove('flex');
+      elements.form.reset();
+      elements.colorInput.value = '#6366f1';
+      elements.sectionInput.value = '';
+      updatePreview();
+    }
+
+    function getCategoryById(categoryId) {
+      return state.categories.find(function matchCategory(category) {
+        return String(category.id) === String(categoryId);
+      }) || null;
+    }
+
+    async function saveCategory() {
+      const name = String(elements.nameInput.value || '').trim();
+      const slug = slugify(elements.slugInput.value || name);
+
+      if (!name) {
+        layout.setNotice('Category name is required.', 'error');
+        elements.nameInput.focus();
+        return;
+      }
+
+      const payload = {
+        name: name,
+        slug: slug,
+        sectionId: String(elements.sectionInput.value || '').trim(),
+        icon: String(elements.iconInput.value || '').trim(),
+        order: Number(elements.orderInput.value) || undefined,
+        color: normalizeColor(elements.colorInput.value),
+        description: String(elements.descriptionInput.value || '').trim(),
+      };
+
+      const isEditing = !!state.editingId;
+
+      try {
+        layout.setNotice(isEditing ? 'Saving category changes...' : 'Creating category...', 'info');
+        if (isEditing) {
+          await AdminApp.requestJson('/api/data/categories/' + encodeURIComponent(state.editingId), {
+            method: 'PATCH',
+            body: payload,
+          });
+        } else {
+          await AdminApp.requestJson('/api/data/categories', {
+            method: 'POST',
+            body: payload,
+          });
+        }
+
+        closeModal();
+        await loadData(false);
+        layout.setNotice(isEditing ? 'Category updated.' : 'Category created.', 'success');
+      } catch (error) {
+        layout.setNotice(error.message || 'Failed to save category.', 'error');
+      }
+    }
+
+    async function deleteCategory(categoryId) {
+      const category = getCategoryById(categoryId);
+      if (!category) {
+        return;
+      }
+
+      if (getUsage(categoryId) > 0) {
+        layout.setNotice('This category is still linked to posts. Remove those links before deleting it.', 'error');
+        return;
+      }
+
+      if (!window.confirm('Delete "' + (category.name || category.slug || category.id) + '"?')) {
+        return;
+      }
+
+      try {
+        layout.setNotice('Deleting category...', 'info');
+        await AdminApp.requestJson('/api/data/categories/' + encodeURIComponent(categoryId), {
+          method: 'DELETE',
+        });
+        if (state.editingId === String(categoryId)) {
+          closeModal();
+        }
+        await loadData(false);
+        layout.setNotice('Category deleted.', 'success');
+      } catch (error) {
+        layout.setNotice(error.message || 'Failed to delete category.', 'error');
+      }
+    }
+
+    async function loadData(showMessage) {
+      try {
+        if (showMessage !== false) {
+          layout.setNotice('Loading categories, sections, and usage data...', 'info');
+        }
+
+        const [categories, sections, posts] = await Promise.all([
+          AdminApp.requestJson('/api/data/categories'),
+          AdminApp.requestJson('/api/data/sections'),
+          AdminApp.requestJson('/api/data/posts'),
+        ]);
+
+        state.categories = Array.isArray(categories) ? categories : [];
+        state.sections = Array.isArray(sections) ? sections : [];
+        state.posts = Array.isArray(posts) ? posts : [];
+        state.usageMap = buildUsageMap(state.posts);
+
+        renderSectionOptions();
+        syncMetrics();
+        renderList();
+
+        if (showMessage !== false) {
+          layout.setNotice('Category data loaded.', 'success');
+        }
+      } catch (error) {
+        layout.setNotice(error.message || 'Failed to load category data.', 'error');
+      }
+    }
+
+    document.getElementById('reload-categories-btn').addEventListener('click', function onReload() {
+      loadData(true);
+    });
+
+    document.getElementById('create-category-btn').addEventListener('click', function onCreate() {
+      openModal(null);
+    });
+
+    elements.searchInput.addEventListener('input', function onSearch() {
+      state.search = elements.searchInput.value || '';
+      renderList();
+    });
+
+    elements.sectionFilter.addEventListener('change', function onSectionFilter() {
+      state.sectionFilter = elements.sectionFilter.value || '';
+      renderList();
+    });
+
+    elements.usageFilter.addEventListener('change', function onUsageFilter() {
+      state.usageFilter = elements.usageFilter.value || 'all';
+      renderList();
+    });
+
+    elements.closeModalButton.addEventListener('click', closeModal);
+
+    elements.modal.addEventListener('click', function onModalClick(event) {
+      if (event.target === elements.modal) {
+        closeModal();
+      }
+    });
+
+    elements.form.addEventListener('submit', function onSubmit(event) {
+      event.preventDefault();
+      saveCategory();
+    });
+
+    elements.nameInput.addEventListener('input', function onNameInput() {
+      if (!state.slugTouched) {
+        elements.slugInput.value = slugify(elements.nameInput.value);
+      }
+      updatePreview();
+    });
+
+    elements.slugInput.addEventListener('input', function onSlugInput() {
+      state.slugTouched = true;
+    });
+
+    elements.iconInput.addEventListener('input', updatePreview);
+    elements.colorInput.addEventListener('input', updatePreview);
+
+    elements.deleteButton.addEventListener('click', function onDeleteButton() {
+      if (state.editingId) {
+        deleteCategory(state.editingId);
+      }
+    });
+
+    elements.list.addEventListener('click', function onListClick(event) {
+      const button = event.target.closest('button[data-action][data-id]');
+      if (!button) {
+        return;
+      }
+
+      const action = button.getAttribute('data-action');
+      const categoryId = button.getAttribute('data-id');
+
+      if (action === 'edit') {
+        openModal(getCategoryById(categoryId));
+        return;
+      }
+
+      if (action === 'delete') {
+        deleteCategory(categoryId);
+      }
+    });
+
+    const unsubscribe = AdminApp.subscribeToDataChanges(function onDataChange() {
+      loadData(false);
+    });
+
+    window.addEventListener('beforeunload', unsubscribe);
+
+    updatePreview();
+    loadData(true);
+  </script>
+</body>
+</html>

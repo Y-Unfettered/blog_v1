@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>后台管理 - 系统设置</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+            dark: {
+              bg: '#0a0a0a',
+              surface: '#111111',
+              border: '#1f1f1f',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    
+    .sidebar-item { transition: all 0.2s ease; border-right: 2px solid transparent; }
+    .sidebar-item:hover { background: rgba(99, 102, 241, 0.08); }
+    .sidebar-item.active { background: rgba(99, 102, 241, 0.12); border-right-color: #6366f1; color: #6366f1; }
+    .dark .sidebar-item:hover { background: rgba(99, 102, 241, 0.06); }
+    .dark .sidebar-item.active { background: rgba(99, 102, 241, 0.1); border-right-color: #818cf8; color: #818cf8; }
+    
+    .setting-card { transition: all 0.2s; }
+    .setting-card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
+    .dark .setting-card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+    
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .dark ::-webkit-scrollbar-thumb { background: #374151; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .dark ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-dark-bg dark:text-gray-100 transition-colors duration-200">
+  
+  <header class="sticky top-0 z-50 bg-white dark:bg-dark-surface border-b border-gray-200 dark:border-dark-border transition-colors duration-200">
+    <div class="flex items-center justify-between px-6 h-16">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+          </svg>
+        </div>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">DevLog 后台管理</h1>
+      </div>
+      <div class="flex items-center gap-4">
+        <!-- 主题切换按钮 -->
+        <button onclick="toggleTheme()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors" title="切换主题">
+          <svg id="themeIcon" class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+          </svg>
+        </button>
+        <button onclick="goBack()" class="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-sm font-medium text-gray-700 dark:text-gray-300">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+          </svg>
+          返回
+        </button>
+        <button onclick="logout()" class="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-sm font-medium text-gray-700 dark:text-gray-300">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+          </svg>
+          退�?        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex min-h-[calc(100vh-64px)]">
+    <aside class="w-64 bg-white dark:bg-dark-surface border-r border-gray-200 dark:border-dark-border transition-colors duration-200">
+      <nav class="py-4">
+        <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3" onclick="goToDashboard()">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+          </svg>
+          <span class="font-medium">概览</span>
+        </div>
+        <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3" onclick="goToPosts()">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          <span class="font-medium">文章管理</span>
+        </div>
+        <a href="/admin/sections" class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3" style="text-decoration: none;">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+          </svg>
+          <span class="font-medium">栏目管理</span>
+        </a>
+        <a href="/admin/categories" class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3" style="text-decoration: none;">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+          </svg>
+          <span class="font-medium">分类管理</span>
+        </a>
+        <a href="/admin/tags" class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3" style="text-decoration: none;">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+          </svg>
+          <span class="font-medium">标签管理</span>
+        </a>
+        <div class="sidebar-item active px-6 py-3 cursor-pointer flex items-center gap-3">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+          <span class="font-medium">系统设置</span>
+        </div>
+      </nav>
+    </aside>
+
+    <main class="flex-1 p-6 overflow-y-auto">
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">系统设置</h2>
+
+      <div class="space-y-6">
+        <!-- 基本设置 -->
+        <div class="setting-card bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl p-6 transition-colors duration-200">
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">基本信息</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">博客名称</label>
+              <input type="text" id="blogName" class="w-full max-w-md px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" value="DevLog">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">博客描述</label>
+              <textarea id="blogDesc" rows="3" class="w-full max-w-md px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="简要描述你的博�?>记录技术与生活</textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- SEO 设置 -->
+        <div class="setting-card bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl p-6 transition-colors duration-200">
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">SEO 设置</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Meta Keywords</label>
+              <input type="text" id="metaKeywords" class="w-full max-w-md px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="用逗号分隔的关键词">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Meta Description</label>
+              <textarea id="metaDescription" rows="3" class="w-full max-w-md px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="网站描述，用于搜索引�?></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- 其他设置 -->
+        <div class="setting-card bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl p-6 transition-colors duration-200">
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">其他设置</h3>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-sm font-medium text-gray-900 dark:text-white">允许评论</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">开启后文章底部显示评论功能</div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="allowComments" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:peer-checked:bg-indigo-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+              </label>
+            </div>
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-sm font-medium text-gray-900 dark:text-white">文章显示数量</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">首页每页显示的文章数�?/div>
+              </div>
+              <input type="number" id="postsPerPage" value="10" class="w-24 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center">
+            </div>
+          </div>
+        </div>
+
+        <!-- 保存按钮 -->
+        <div class="flex justify-end">
+          <button onclick="saveSettings()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors font-medium shadow-lg shadow-indigo-500/20">保存设置</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // ========== 主题切换 ==========
+    let currentTheme = localStorage.getItem('theme') || 'dark';
+    
+    function initTheme() {
+      setTheme(currentTheme);
+    }
+    
+    function toggleTheme() {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      setTheme(currentTheme);
+    }
+    
+    function setTheme(theme) {
+      currentTheme = theme;
+      localStorage.setItem('theme', theme);
+      const html = document.documentElement;
+      const icon = document.getElementById('themeIcon');
+      
+      html.classList.remove('light', 'dark');
+      html.classList.add(theme);
+      
+      if (theme === 'dark') {
+        icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>';
+      } else {
+        icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>';
+      }
+    }
+    
+    // 初始化主�?    initTheme();
+
+    // 加载设置
+    async function loadSettings() {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/settings', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const settings = data.settings || {};
+          document.getElementById('blogName').value = settings.blogName || 'DevLog';
+          document.getElementById('blogDesc').value = settings.blogDesc || '记录技术与生活';
+          document.getElementById('metaKeywords').value = settings.metaKeywords || '';
+          document.getElementById('metaDescription').value = settings.metaDescription || '';
+          document.getElementById('allowComments').checked = settings.allowComments !== false;
+          document.getElementById('postsPerPage').value = settings.postsPerPage || 10;
+        }
+      } catch (error) {
+        console.error('加载设置失败:', error);
+      }
+    }
+
+    // 保存设置
+    async function saveSettings() {
+      const settings = {
+        blogName: document.getElementById('blogName').value.trim(),
+        blogDesc: document.getElementById('blogDesc').value.trim(),
+        metaKeywords: document.getElementById('metaKeywords').value.trim(),
+        metaDescription: document.getElementById('metaDescription').value.trim(),
+        allowComments: document.getElementById('allowComments').checked,
+        postsPerPage: parseInt(document.getElementById('postsPerPage').value)
+      };
+
+      if (!settings.blogName) {
+        alert('请输入博客名�?);
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/settings', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(settings)
+        });
+        
+        if (response.ok) {
+          alert('设置已保存！');
+        } else {
+          alert('保存失败');
+        }
+      } catch (error) {
+        console.error('保存设置失败:', error);
+        alert('设置已本地保存（演示模式�?);
+      }
+    }
+
+    // 导航函数
+    function goBack() { window.history.back(); }
+    function goToDashboard() { window.location.href = '/admin/dashboard'; }
+    function goToPosts() { window.location.href = '/admin/posts'; }
+    function goToCategories() { window.location.href = '/admin/categories'; }
+    function goToSections() { window.location.href = '/admin/sections'; }
+    function goToTags() { window.location.href = '/admin/tags'; }
+    function logout() { localStorage.removeItem('token'); window.location.href = '/admin'; }
+
+    // 初始�?    loadSettings();
+  </script>
+</body>
+</html>

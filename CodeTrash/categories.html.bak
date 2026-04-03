@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>后台管理 - 分类管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+            dark: {
+              100: '#1e293b',
+              200: '#172033',
+              300: '#0f1115',
+              400: '#0a0c10',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    .sidebar-item {
+      transition: all 0.3s ease;
+    }
+    .sidebar-item:hover {
+      background: rgba(99, 102, 241, 0.1);
+      border-right: 3px solid #6366f1;
+    }
+    .sidebar-item.active {
+      background: rgba(99, 102, 241, 0.2);
+      border-right: 3px solid #6366f1;
+      color: #818cf8;
+    }
+  </style>
+</head>
+<body class="bg-[#0f1115] text-gray-300 min-h-screen">
+  <header class="sticky top-0 z-50 bg-[#0f1115]/80 backdrop-blur-xl border-b border-gray-800">
+    <div class="flex items-center justify-between px-6 h-16">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+          </svg>
+        </div>
+        <h1 class="text-xl font-bold text-white">DevLog 后台管理</h1>
+      </div>
+      <div class="flex items-center gap-4">
+        <button onclick="goBack()" class="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+          </svg>
+          返回
+        </button>
+        <button onclick="logout()" class="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+          </svg>
+          退出
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex min-h-[calc(100vh-64px)]">
+    <aside class="w-64 bg-[#0a0c10] border-r border-gray-800">
+      <nav class="py-4">
+        <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3" onclick="goToDashboard()">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+          </svg>
+          <span>概览</span>
+        </div>
+        <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3" onclick="goToPosts()">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          <span>文章管理</span>
+        </div>
+        <div class="sidebar-item active px-6 py-3 cursor-pointer flex items-center gap-3">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+          </svg>
+          <span>分类管理</span>
+        </div>
+        <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3" onclick="goToTags()">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+          </svg>
+          <span>标签管理</span>
+        </div>
+        <div class="sidebar-item px-6 py-3 cursor-pointer flex items-center gap-3" onclick="goToSettings()">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+          <span>系统设置</span>
+        </div>
+      </nav>
+    </aside>
+
+    <main class="flex-1 p-8 overflow-y-auto">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-white">分类管理</h2>
+        <button onclick="openEditor()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all">
+          新增分类
+        </button>
+      </div>
+
+      <div class="bg-[#111] border border-gray-800 rounded-xl p-4 mb-6">
+        <div class="flex items-center gap-4">
+          <div class="flex-1">
+            <input
+              id="searchInput"
+              type="text"
+              placeholder="搜索分类名称 / Slug"
+              class="w-full px-4 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              oninput="renderTable()"
+            />
+          </div>
+          <select id="parentFilter" onchange="renderTable()" class="px-4 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500">
+            <option value="">全部分类</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="bg-[#111] border border-gray-800 rounded-xl overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-900/50 text-gray-400">
+            <tr>
+              <th class="text-left px-6 py-4 w-12">排序</th>
+              <th class="text-left px-6 py-4">名称</th>
+              <th class="text-left px-6 py-4">Slug</th>
+              <th class="text-left px-6 py-4">父分类</th>
+              <th class="text-left px-6 py-4">颜色</th>
+              <th class="text-left px-6 py-4">图标</th>
+              <th class="text-left px-6 py-4">文章数</th>
+              <th class="text-right px-6 py-4">操作</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-gray-800"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <div id="editorModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50">
+    <div class="w-full max-w-xl bg-[#111] border border-gray-800 rounded-xl p-6">
+      <h3 id="editorTitle" class="text-lg font-bold text-white mb-5">新增分类</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm text-gray-400 mb-2">分类名称</label>
+          <input id="categoryName" class="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-400 mb-2">Slug</label>
+          <input id="categorySlug" class="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-400 mb-2">父分类（可选）</label>
+          <select id="categoryParent" class="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500">
+            <option value="">无（顶级分类）</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">颜色</label>
+            <input id="categoryColor" type="color" class="w-full h-10 bg-gray-800 border border-gray-700 rounded-lg p-1" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">图标</label>
+            <input id="categoryIcon" class="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500" placeholder="folder" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-400 mb-2">排序</label>
+          <input id="categoryOrder" type="number" min="0" class="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500" value="0" />
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button onclick="closeEditor()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg">取消</button>
+        <button onclick="saveCategory()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/admin';
+    }
+
+    let categories = [];
+    let posts = [];
+    let editingId = '';
+    let slugTouched = false;
+
+    const searchInput = document.getElementById('searchInput');
+    const parentFilter = document.getElementById('parentFilter');
+    const editorModal = document.getElementById('editorModal');
+    const editorTitle = document.getElementById('editorTitle');
+    const categoryNameInput = document.getElementById('categoryName');
+    const categorySlugInput = document.getElementById('categorySlug');
+    const categoryColorInput = document.getElementById('categoryColor');
+    const categoryIconInput = document.getElementById('categoryIcon');
+    const categoryParentInput = document.getElementById('categoryParent');
+    const categoryOrderInput = document.getElementById('categoryOrder');
+
+    function escapeHtml(input) {
+      return String(input || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function slugify(input) {
+      return String(input || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    }
+
+    function nextId(list, prefix) {
+      const nums = list
+        .map((item) => Number(item && item.id))
+        .filter((n) => Number.isFinite(n));
+      if (nums.length) {
+        return String(Math.max(...nums) + 1);
+      }
+      return `${prefix}-${Date.now()}`;
+    }
+
+    function resolvePostCategories(post) {
+      if (Array.isArray(post.categories)) return post.categories;
+      if (Array.isArray(post.categoryIds)) return post.categoryIds;
+      return [];
+    }
+
+    function countUsage(categoryId) {
+      return posts.reduce((total, post) => {
+        return resolvePostCategories(post).includes(categoryId) ? total + 1 : total;
+      }, 0);
+    }
+
+    async function fetchData(type) {
+      const response = await fetch(`/api/data/${type}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.status === 401) {
+        logout();
+        return [];
+      }
+      if (!response.ok) {
+        throw new Error(`加载 ${type} 失败`);
+      }
+      return await response.json();
+    }
+
+    async function saveData(type, data) {
+      const response = await fetch(`/api/data/${type}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error(`保存 ${type} 失败`);
+      }
+    }
+
+    function renderTable() {
+      const keyword = String(searchInput.value || '').trim().toLowerCase();
+      const parentFilterValue = String(parentFilter.value || '');
+      const tbody = document.getElementById('tableBody');
+      
+      let list = categories
+        .slice()
+        .filter((item) => {
+          if (parentFilterValue && String(item.parentId || '') !== parentFilterValue) {
+            return false;
+          }
+          if (!keyword) return true;
+          const name = String(item.name || '').toLowerCase();
+          const slug = String(item.slug || '').toLowerCase();
+          return name.includes(keyword) || slug.includes(keyword);
+        })
+        .sort((a, b) => {
+          const orderA = Number(a.order) || 0;
+          const orderB = Number(b.order) || 0;
+          if (orderA !== orderB) return orderA - orderB;
+          return String(a.name || '').localeCompare(String(b.name || ''));
+        });
+
+      if (!list.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="px-6 py-12 text-center text-gray-500">暂无分类数据</td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = list.map((item, index) => {
+        const usage = countUsage(item.id);
+        const color = item.color || '#6366f1';
+        const parentName = item.parentId ? (categories.find(c => String(c.id) === String(item.parentId))?.name || '-') : '-';
+        return `
+          <tr class="hover:bg-gray-800/20">
+            <td class="px-6 py-4 text-gray-400">
+              <div class="flex items-center gap-2">
+                <button onclick="moveCategory('${escapeHtml(String(item.id))}', -1)" class="p-1 hover:bg-gray-700 rounded ${index === 0 ? 'opacity-30 cursor-not-allowed' : ''}" ${index === 0 ? 'disabled' : ''}>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                </button>
+                <button onclick="moveCategory('${escapeHtml(String(item.id))}', 1)" class="p-1 hover:bg-gray-700 rounded ${index === list.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}" ${index === list.length - 1 ? 'disabled' : ''}>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7 -7"></path></svg>
+                </button>
+              </div>
+            </td>
+            <td class="px-6 py-4 text-gray-200 font-medium">${escapeHtml(item.name)}</td>
+            <td class="px-6 py-4 text-gray-400">${escapeHtml(item.slug)}</td>
+            <td class="px-6 py-4 text-gray-400">${escapeHtml(parentName)}</td>
+            <td class="px-6 py-4">
+              <span class="inline-flex items-center gap-2 text-gray-300">
+                <i class="w-3 h-3 rounded-full" style="background:${escapeHtml(color)}"></i>
+                ${escapeHtml(color)}
+              </span>
+            </td>
+            <td class="px-6 py-4 text-gray-400">${escapeHtml(item.icon || '-')}</td>
+            <td class="px-6 py-4 text-gray-300">${usage}</td>
+            <td class="px-6 py-4 text-right space-x-2">
+              <button onclick="openEditor('${escapeHtml(String(item.id))}')" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded">编辑</button>
+              <button onclick="deleteCategory('${escapeHtml(String(item.id))}')" class="px-3 py-1.5 bg-red-600/80 hover:bg-red-600 text-white rounded">删除</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function moveCategory(id, delta) {
+      const keyword = String(searchInput.value || '').trim().toLowerCase();
+      const parentFilterValue = String(parentFilter.value || '');
+      
+      let list = categories
+        .slice()
+        .filter((item) => {
+          if (parentFilterValue && String(item.parentId || '') !== parentFilterValue) return false;
+          if (keyword) {
+            const name = String(item.name || '').toLowerCase();
+            const slug = String(item.slug || '').toLowerCase();
+            return name.includes(keyword) || slug.includes(keyword);
+          }
+          return true;
+        })
+        .sort((a, b) => {
+          const orderA = Number(a.order) || 0;
+          const orderB = Number(b.order) || 0;
+          if (orderA !== orderB) return orderA - orderB;
+          return String(a.name || '').localeCompare(String(b.name || ''));
+        });
+      
+      const index = list.findIndex(item => String(item.id) === String(id));
+      if (index < 0 || index + delta < 0 || index + delta >= list.length) return;
+      
+      const targetIndex = index + delta;
+      const tempOrder = list[index].order || index;
+      list[index].order = list[targetIndex].order || targetIndex;
+      list[targetIndex].order = tempOrder;
+      
+      // 更新原 categories 数组
+      list.forEach(item => {
+        const origIndex = categories.findIndex(c => String(c.id) === String(item.id));
+        if (origIndex >= 0) {
+          categories[origIndex].order = item.order;
+        }
+      });
+      
+      saveData('categories', categories).then(() => renderTable()).catch(console.error);
+    }
+
+    function updateParentFilter() {
+      const currentValue = parentFilter.value;
+      parentFilter.innerHTML = '<option value="">全部分类</option>' + 
+        categories
+          .filter(c => !c.parentId)
+          .map(cat => `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`).join('');
+      parentFilter.value = currentValue;
+    }
+
+    function updateParentSelect() {
+      const currentValue = categoryParentInput.value;
+      categoryParentInput.innerHTML = '<option value="">无（顶级分类）</option>' + 
+        categories
+          .filter(c => String(c.id) !== String(editingId))
+          .map(cat => `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`).join('');
+      categoryParentInput.value = currentValue;
+    }
+
+    function openEditor(id) {
+      editingId = id || '';
+      slugTouched = false;
+      const item = categories.find((cat) => String(cat.id) === String(editingId));
+
+      editorTitle.textContent = item ? '编辑分类' : '新增分类';
+      categoryNameInput.value = item ? String(item.name || '') : '';
+      categorySlugInput.value = item ? String(item.slug || '') : '';
+      categoryParentInput.value = item ? String(item.parentId || '') : '';
+      categoryColorInput.value = item ? String(item.color || '#6366f1') : '#6366f1';
+      categoryIconInput.value = item ? String(item.icon || '') : '';
+      categoryOrderInput.value = item ? String(item.order || 0) : '0';
+      
+      updateParentSelect();
+      
+      editorModal.classList.remove('hidden');
+      editorModal.classList.add('flex');
+      categoryNameInput.focus();
+    }
+
+    function closeEditor() {
+      editorModal.classList.add('hidden');
+      editorModal.classList.remove('flex');
+      editingId = '';
+    }
+
+    async function saveCategory() {
+      const name = String(categoryNameInput.value || '').trim();
+      const slug = String(categorySlugInput.value || '').trim() || slugify(name);
+      const color = String(categoryColorInput.value || '#6366f1').trim() || '#6366f1';
+      const icon = String(categoryIconInput.value || '').trim();
+      const parentId = String(categoryParentInput.value || '') || null;
+      const order = Number(categoryOrderInput.value) || 0;
+
+      if (!name) {
+        alert('分类名称不能为空');
+        return;
+      }
+      if (!slug) {
+        alert('Slug 不能为空');
+        return;
+      }
+
+      // 检查不能将自己设为父分类
+      if (parentId && String(parentId) === String(editingId)) {
+        alert('不能将自己设为父分类');
+        return;
+      }
+
+      const duplicated = categories.some((item) =>
+        String(item.slug || '').toLowerCase() === slug.toLowerCase()
+        && String(item.id) !== String(editingId)
+      );
+      if (duplicated) {
+        alert('Slug 已存在，请更换');
+        return;
+      }
+
+      if (editingId) {
+        const index = categories.findIndex((item) => String(item.id) === String(editingId));
+        if (index >= 0) {
+          categories[index] = {
+            ...categories[index],
+            name,
+            slug,
+            parentId,
+            color,
+            icon,
+            order,
+          };
+        }
+      } else {
+        categories.push({
+          id: nextId(categories, 'cat'),
+          name,
+          slug,
+          parentId,
+          color,
+          icon,
+          order,
+        });
+      }
+
+      try {
+        await saveData('categories', categories);
+        closeEditor();
+        renderTable();
+        updateParentFilter();
+      } catch (error) {
+        console.error(error);
+        alert('保存分类失败');
+      }
+    }
+
+    async function deleteCategory(id) {
+      const usage = countUsage(id);
+      if (usage > 0) {
+        alert(`该分类已被 ${usage} 篇文章使用，不能删除`);
+        return;
+      }
+      if (!confirm('确定删除该分类吗？')) return;
+
+      categories = categories.filter((item) => String(item.id) !== String(id));
+      try {
+        await saveData('categories', categories);
+        renderTable();
+      } catch (error) {
+        console.error(error);
+        alert('删除分类失败');
+      }
+    }
+
+    async function initPage() {
+      try {
+        const [categoryData, postData] = await Promise.all([
+          fetchData('categories'),
+          fetchData('posts'),
+        ]);
+        categories = Array.isArray(categoryData) ? categoryData : [];
+        posts = Array.isArray(postData) ? postData : [];
+        renderTable();
+        updateParentFilter();
+      } catch (error) {
+        console.error(error);
+        document.getElementById('tableBody').innerHTML = `
+          <tr>
+            <td colspan="8" class="px-6 py-12 text-center text-red-400">加载数据失败，请刷新重试</td>
+          </tr>
+        `;
+      }
+    }
+
+    categoryNameInput.addEventListener('input', () => {
+      if (slugTouched) return;
+      categorySlugInput.value = slugify(categoryNameInput.value);
+    });
+    categorySlugInput.addEventListener('input', () => {
+      slugTouched = true;
+    });
+
+    function goBack() {
+      window.location.href = '/admin/dashboard.html';
+    }
+    function goToDashboard() {
+      window.location.href = '/admin/dashboard.html';
+    }
+    function goToPosts() {
+      window.location.href = '/admin/posts.html';
+    }
+    function goToTags() {
+      window.location.href = '/admin/tags.html';
+    }
+    function goToSettings() {
+      window.location.href = '/admin/settings.html';
+    }
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = '/admin';
+    }
+
+    initPage();
+  </script>
+</body>
+</html>

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevLog Settings</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+            dark: {
+              bg: '#0a0a0a',
+              surface: '#111111',
+              border: '#1f1f1f',
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="/admin/admin-common.css">
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-[#0a0a0a] dark:text-gray-100">
+  <div id="admin-app"></div>
+
+  <script src="/admin/admin-common.js"></script>
+  <script>
+    if (!window.AdminApp || !AdminApp.requireAuth()) {
+      throw new Error('Missing admin auth context.');
+    }
+
+    const locale = AdminApp.getLocale();
+    const t = function translateText(value) {
+      return AdminApp.translate(value, locale);
+    };
+
+    const TEXT = {
+      activeLabel: { en: 'Settings', zh: '设置' },
+      title: { en: 'Settings', zh: '系统设置' },
+      description: {
+        en: 'Manage core site metadata, profile content, about page sections, markdown theme, and auto-generated navigation.',
+        zh: '统一管理站点基础信息、个人资料、关于页内容、Markdown 主题和自动生成的前台导航。',
+      },
+      manageSections: { en: 'Manage Sections', zh: '管理栏目' },
+      reload: { en: 'Reload', zh: '重新加载' },
+      saveAll: { en: 'Save All', zh: '保存全部' },
+      siteBasics: { en: 'Site Basics', zh: '站点基础' },
+      coreMetadata: { en: 'Core Metadata and SEO', zh: '基础信息与 SEO' },
+      siteName: { en: 'Site Name', zh: '站点名称' },
+      defaultAuthor: { en: 'Default Author', zh: '默认作者' },
+      contactEmail: { en: 'Contact Email', zh: '联系邮箱' },
+      postsPerPage: { en: 'Posts Per Page', zh: '首页文章数量' },
+      siteDescription: { en: 'Site Description', zh: '站点描述' },
+      metaKeywords: { en: 'Meta Keywords', zh: 'Meta 关键词' },
+      markdownTheme: { en: 'Markdown Theme', zh: 'Markdown 主题' },
+      metaDescription: { en: 'Meta Description', zh: 'Meta 描述' },
+      profile: { en: 'Profile', zh: '个人资料' },
+      publicAuthorProfile: { en: 'Public Author Profile', zh: '前台作者资料' },
+      displayName: { en: 'Display Name', zh: '展示名称' },
+      subtitle: { en: 'Subtitle', zh: '副标题' },
+      bio: { en: 'Bio / Motto', zh: '简介 / 座右铭' },
+      avatarUrl: { en: 'Avatar URL', zh: '头像 URL' },
+      github: { en: 'GitHub', zh: 'GitHub' },
+      planet: { en: 'Knowledge Planet / External Home', zh: '知识星球 / 外部主页' },
+      publicEmail: { en: 'Public Email', zh: '公开邮箱' },
+      aboutPage: { en: 'About Page', zh: '关于页面' },
+      aboutContent: { en: 'About Content', zh: '关于内容' },
+      addSkill: { en: 'Add Skill', zh: '新增技能项' },
+      aboutTitle: { en: 'About Title', zh: '关于标题' },
+      skillsSectionTitle: { en: 'Skills Section Title', zh: '技能区标题' },
+      aboutBody: { en: 'About Body', zh: '关于正文' },
+      skillsList: { en: 'Skills List', zh: '技能列表' },
+      navigation: { en: 'Navigation', zh: '导航' },
+      publicNavigationEntries: { en: 'Generated Navigation', zh: '自动生成导航' },
+      navigationDescription: {
+        en: 'Navigation is generated automatically from enabled sections, with fixed Home and About links. Edit sections on the sections page.',
+        zh: '导航会根据已启用栏目自动生成，并固定包含“首页”和“关于我”。栏目本身请到栏目页维护。',
+      },
+      navigationPreviewHint: {
+        en: 'Home and About are system links. All enabled sections appear automatically in between.',
+        zh: '首页和关于我是系统链接，所有已启用栏目会自动插入在中间。',
+      },
+      systemLink: { en: 'System Link', zh: '系统链接' },
+      sectionLink: { en: 'Section Link', zh: '栏目链接' },
+      noSkills: { en: 'No skills yet. Click "Add Skill" to create one.', zh: '暂无技能项，点击“新增技能项”添加。' },
+      skillLabel: { en: 'Skill', zh: '技能项' },
+      remove: { en: 'Remove', zh: '删除' },
+      label: { en: 'Label', zh: '名称' },
+      key: { en: 'Key', zh: '标识' },
+      iconifyIcon: { en: 'Iconify icon', zh: 'Iconify 图标' },
+      colorPlaceholder: { en: 'Color, e.g. #34d399', zh: '颜色，例如 #34d399' },
+      noNavItems: { en: 'No enabled sections yet. Enable at least one section to generate navigation.', zh: '当前没有启用中的栏目，请先在栏目页启用至少一个栏目。' },
+      href: { en: 'Href', zh: '地址' },
+      order: { en: 'Order', zh: '排序' },
+      siteNameRequired: { en: 'Site name is required.', zh: '站点名称不能为空。' },
+      loading: { en: 'Loading settings...', zh: '正在加载设置...' },
+      loaded: { en: 'Settings loaded.', zh: '设置已加载。' },
+      loadFailed: { en: 'Failed to load settings: ', zh: '加载设置失败：' },
+      saving: { en: 'Saving settings...', zh: '正在保存设置...' },
+      saved: { en: 'Settings saved.', zh: '站点设置已保存。' },
+      saveFailed: { en: 'Failed to save settings: ', zh: '保存设置失败：' },
+    };
+
+    const layout = AdminApp.mountPage({
+      active: 'settings',
+      activeLabel: TEXT.activeLabel,
+      title: TEXT.title,
+      description: TEXT.description,
+      actions: [
+        {
+          id: 'open-sections-btn',
+          label: TEXT.manageSections,
+          href: '/admin/sections',
+          className: 'rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800',
+        },
+        {
+          id: 'reload-settings-btn',
+          label: TEXT.reload,
+          className: 'rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800',
+        },
+        {
+          id: 'save-settings-btn',
+          label: TEXT.saveAll,
+          className: 'rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-colors hover:bg-indigo-700',
+        },
+      ],
+    });
+
+    layout.content.innerHTML = `
+      <div class="grid gap-6">
+        <section class="admin-panel p-6">
+          <div class="admin-kicker text-gray-500 dark:text-gray-400">${t(TEXT.siteBasics)}</div>
+          <h2 class="mt-1 text-lg font-semibold text-gray-900 dark:text-white">${t(TEXT.coreMetadata)}</h2>
+          <div class="mt-5 grid gap-4 lg:grid-cols-2">
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="siteName">${t(TEXT.siteName)}</label>
+              <input id="siteName" class="input-control" type="text">
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="author">${t(TEXT.defaultAuthor)}</label>
+              <input id="author" class="input-control" type="text">
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="email">${t(TEXT.contactEmail)}</label>
+              <input id="email" class="input-control" type="email">
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="postsPerPage">${t(TEXT.postsPerPage)}</label>
+              <input id="postsPerPage" class="input-control" type="number" min="1" step="1">
+            </div>
+            <div class="lg:col-span-2">
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="description">${t(TEXT.siteDescription)}</label>
+              <textarea id="description" class="textarea-control" rows="4"></textarea>
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="metaKeywords">${t(TEXT.metaKeywords)}</label>
+              <input id="metaKeywords" class="input-control" type="text" placeholder="AI, Vue, blog, engineering">
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="markdownTheme">${t(TEXT.markdownTheme)}</label>
+              <select id="markdownTheme" class="select-control">
+                <option value="default">default</option>
+                <option value="github-dark">github-dark</option>
+              </select>
+            </div>
+            <div class="lg:col-span-2">
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="metaDescription">${t(TEXT.metaDescription)}</label>
+              <textarea id="metaDescription" class="textarea-control" rows="3"></textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="admin-panel p-6">
+          <div class="admin-kicker text-gray-500 dark:text-gray-400">${t(TEXT.profile)}</div>
+          <h2 class="mt-1 text-lg font-semibold text-gray-900 dark:text-white">${t(TEXT.publicAuthorProfile)}</h2>
+          <div class="mt-5 grid gap-4 lg:grid-cols-2">
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="profileName">${t(TEXT.displayName)}</label>
+              <input id="profileName" class="input-control" type="text">
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="profileSubtitle">${t(TEXT.subtitle)}</label>
+              <input id="profileSubtitle" class="input-control" type="text">
+            </div>
+            <div class="lg:col-span-2">
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="profileMotto">${t(TEXT.bio)}</label>
+              <textarea id="profileMotto" class="textarea-control" rows="3"></textarea>
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="profileAvatar">${t(TEXT.avatarUrl)}</label>
+              <input id="profileAvatar" class="input-control" type="url">
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="profileGithub">${t(TEXT.github)}</label>
+              <input id="profileGithub" class="input-control" type="text">
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="profilePlanet">${t(TEXT.planet)}</label>
+              <input id="profilePlanet" class="input-control" type="text">
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="profileEmail">${t(TEXT.publicEmail)}</label>
+              <input id="profileEmail" class="input-control" type="email">
+            </div>
+          </div>
+        </section>
+
+        <section class="admin-panel p-6">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div class="admin-kicker text-gray-500 dark:text-gray-400">${t(TEXT.aboutPage)}</div>
+              <h2 class="mt-1 text-lg font-semibold text-gray-900 dark:text-white">${t(TEXT.aboutContent)}</h2>
+            </div>
+            <button id="add-skill-btn" type="button" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">${t(TEXT.addSkill)}</button>
+          </div>
+          <div class="mt-5 grid gap-4 lg:grid-cols-2">
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="aboutTitle">${t(TEXT.aboutTitle)}</label>
+              <input id="aboutTitle" class="input-control" type="text">
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="aboutSkillsTitle">${t(TEXT.skillsSectionTitle)}</label>
+              <input id="aboutSkillsTitle" class="input-control" type="text">
+            </div>
+            <div class="lg:col-span-2">
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="aboutContent">${t(TEXT.aboutBody)}</label>
+              <textarea id="aboutContent" class="textarea-control" rows="5"></textarea>
+            </div>
+          </div>
+          <div class="mt-6">
+            <div class="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">${t(TEXT.skillsList)}</div>
+            <div id="skills-list" class="space-y-3"></div>
+          </div>
+        </section>
+
+        <section class="admin-panel p-6">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div class="admin-kicker text-gray-500 dark:text-gray-400">${t(TEXT.navigation)}</div>
+              <h2 class="mt-1 text-lg font-semibold text-gray-900 dark:text-white">${t(TEXT.publicNavigationEntries)}</h2>
+              <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">${t(TEXT.navigationDescription)}</p>
+            </div>
+          </div>
+          <div class="mt-4 rounded-2xl border border-dashed border-gray-200 px-4 py-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">${t(TEXT.navigationPreviewHint)}</div>
+          <div id="nav-list" class="mt-5 space-y-4"></div>
+        </section>
+      </div>
+    `;
+
+    const state = {
+      settings: {},
+      skills: [],
+      navItems: [],
+    };
+
+    function makeId(prefix) {
+      return prefix + '-' + Date.now() + '-' + Math.random().toString(16).slice(2, 8);
+    }
+
+    function normalizeSkill(skill) {
+      return {
+        id: skill.id || makeId('skill'),
+        label: String(skill.label || '').trim(),
+        icon: String(skill.icon || '').trim(),
+        color: String(skill.color || '').trim(),
+      };
+    }
+
+    function normalizeNavItem(item, index) {
+      const href = String(item.href || item.url || '').trim();
+      return {
+        id: item.id || makeId('nav'),
+        label: String(item.label || item.name || '').trim(),
+        href: href,
+        type: String(item.type || (item.systemKey ? 'system' : 'section')).trim() || 'section',
+        systemKey: String(item.systemKey || '').trim(),
+        sectionId: String(item.sectionId || '').trim(),
+        order: Number(item.order || (index + 1)) || (index + 1),
+      };
+    }
+
+    function renderSkills() {
+      const container = document.getElementById('skills-list');
+      if (!state.skills.length) {
+        container.innerHTML = '<div class="rounded-2xl bg-gray-50 px-4 py-5 text-sm text-gray-500 dark:bg-gray-800/70 dark:text-gray-400">' + AdminApp.escapeHtml(t(TEXT.noSkills)) + '</div>';
+        return;
+      }
+
+      container.innerHTML = state.skills.map(function renderSkill(skill, index) {
+        return `
+          <div class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800" data-skill-row="${skill.id}">
+            <div class="mb-4 flex items-center justify-between gap-4">
+              <div class="text-sm font-semibold text-gray-900 dark:text-white">${t(TEXT.skillLabel)} ${index + 1}</div>
+              <button type="button" class="text-sm font-medium text-rose-600 hover:text-rose-500 dark:text-rose-300" data-remove-skill="${skill.id}">${t(TEXT.remove)}</button>
+            </div>
+            <div class="grid gap-3 md:grid-cols-3">
+              <input class="input-control" type="text" placeholder="${AdminApp.escapeHtml(t(TEXT.label))}" data-skill-field="label" value="${AdminApp.escapeHtml(skill.label)}">
+              <input class="input-control" type="text" placeholder="${AdminApp.escapeHtml(t(TEXT.iconifyIcon))}" data-skill-field="icon" value="${AdminApp.escapeHtml(skill.icon)}">
+              <input class="input-control" type="text" placeholder="${AdminApp.escapeHtml(t(TEXT.colorPlaceholder))}" data-skill-field="color" value="${AdminApp.escapeHtml(skill.color)}">
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderNavItems() {
+      const container = document.getElementById('nav-list');
+      if (!state.navItems.length) {
+        container.innerHTML = '<div class="rounded-2xl bg-gray-50 px-4 py-5 text-sm text-gray-500 dark:bg-gray-800/70 dark:text-gray-400">' + AdminApp.escapeHtml(t(TEXT.noNavItems)) + '</div>';
+        return;
+      }
+
+      container.innerHTML = state.navItems.map(function renderNavItem(item, index) {
+        const badgeText = item.type === 'system' ? t(TEXT.systemLink) : t(TEXT.sectionLink);
+        const badgeClass = item.type === 'system'
+          ? 'bg-sky-500/10 text-sky-700 dark:text-sky-300'
+          : 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300';
+        return `
+          <div class="rounded-2xl border border-gray-200 p-4 dark:border-gray-800">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <div class="text-sm font-semibold text-gray-900 dark:text-white">${AdminApp.escapeHtml(item.label || '--')}</div>
+                  <span class="pill ${badgeClass}">${AdminApp.escapeHtml(badgeText)}</span>
+                </div>
+                <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">${t(TEXT.order)} ${item.order || (index + 1)}</div>
+              </div>
+            </div>
+            <div class="mt-4 grid gap-3 lg:grid-cols-2">
+              <div class="rounded-2xl bg-gray-50 px-4 py-3 dark:bg-gray-800/70">
+                <div class="text-xs uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">${t(TEXT.href)}</div>
+                <div class="mt-2 text-sm font-medium text-gray-900 dark:text-white">${AdminApp.escapeHtml(item.href || '--')}</div>
+              </div>
+              <div class="rounded-2xl bg-gray-50 px-4 py-3 dark:bg-gray-800/70">
+                <div class="text-xs uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">${t(TEXT.key)}</div>
+                <div class="mt-2 text-sm font-medium text-gray-900 dark:text-white">${AdminApp.escapeHtml(item.type === 'system' ? (item.systemKey || item.id) : (item.sectionId || item.id))}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function fillForm(settings) {
+      document.getElementById('siteName').value = settings.siteName || settings.blogName || '';
+      document.getElementById('author').value = settings.author || '';
+      document.getElementById('email').value = settings.email || '';
+      document.getElementById('postsPerPage').value = settings.postsPerPage || 10;
+      document.getElementById('description').value = settings.description || settings.blogDesc || '';
+      document.getElementById('metaKeywords').value = settings.metaKeywords || '';
+      document.getElementById('metaDescription').value = settings.metaDescription || '';
+      document.getElementById('markdownTheme').value = settings.markdownTheme || 'default';
+
+      const profile = settings.profile || {};
+      document.getElementById('profileName').value = profile.name || '';
+      document.getElementById('profileSubtitle').value = profile.subtitle || '';
+      document.getElementById('profileMotto').value = profile.motto || '';
+      document.getElementById('profileAvatar').value = profile.avatar || '';
+      document.getElementById('profileGithub').value = profile.github || '';
+      document.getElementById('profilePlanet').value = profile.planet || '';
+      document.getElementById('profileEmail').value = profile.email || '';
+
+      const about = settings.about || {};
+      document.getElementById('aboutTitle').value = about.title || '';
+      document.getElementById('aboutSkillsTitle').value = about.skillsTitle || '';
+      document.getElementById('aboutContent').value = about.content || '';
+    }
+
+    function syncSkillsFromDom() {
+      state.skills = Array.from(document.querySelectorAll('[data-skill-row]')).map(function mapRow(row) {
+        return normalizeSkill({
+          id: row.getAttribute('data-skill-row'),
+          label: row.querySelector('[data-skill-field="label"]').value,
+          icon: row.querySelector('[data-skill-field="icon"]').value,
+          color: row.querySelector('[data-skill-field="color"]').value,
+        });
+      }).filter(function keepSkill(skill) {
+        return skill.label;
+      });
+    }
+
+    function collectSettingsPayload() {
+      syncSkillsFromDom();
+      const siteName = document.getElementById('siteName').value.trim();
+      if (!siteName) {
+        throw new Error(t(TEXT.siteNameRequired));
+      }
+
+      const description = document.getElementById('description').value.trim();
+
+      return {
+        ...state.settings,
+        siteName: siteName,
+        blogName: siteName,
+        description: description,
+        blogDesc: description,
+        author: document.getElementById('author').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        postsPerPage: Number(document.getElementById('postsPerPage').value) || 10,
+        metaKeywords: document.getElementById('metaKeywords').value.trim(),
+        metaDescription: document.getElementById('metaDescription').value.trim(),
+        markdownTheme: document.getElementById('markdownTheme').value,
+        profile: {
+          ...(state.settings.profile || {}),
+          name: document.getElementById('profileName').value.trim(),
+          subtitle: document.getElementById('profileSubtitle').value.trim(),
+          motto: document.getElementById('profileMotto').value.trim(),
+          avatar: document.getElementById('profileAvatar').value.trim(),
+          github: document.getElementById('profileGithub').value.trim(),
+          planet: document.getElementById('profilePlanet').value.trim(),
+          email: document.getElementById('profileEmail').value.trim(),
+        },
+        about: {
+          ...(state.settings.about || {}),
+          title: document.getElementById('aboutTitle').value.trim(),
+          skillsTitle: document.getElementById('aboutSkillsTitle').value.trim(),
+          content: document.getElementById('aboutContent').value.trim(),
+          skills: state.skills,
+        },
+      };
+    }
+
+    async function loadAllSettings() {
+      layout.setNotice(t(TEXT.loading), 'info');
+      try {
+        const results = await Promise.all([
+          AdminApp.requestJson('/api/data/settings'),
+          AdminApp.requestJson('/api/data/nav'),
+        ]);
+
+        state.settings = results[0] || {};
+        state.skills = Array.isArray(state.settings.about && state.settings.about.skills)
+          ? state.settings.about.skills.map(normalizeSkill)
+          : [];
+        state.navItems = (Array.isArray(results[1]) ? results[1] : []).map(normalizeNavItem);
+
+        fillForm(state.settings);
+        renderSkills();
+        renderNavItems();
+        layout.setNotice(t(TEXT.loaded), 'success');
+      } catch (error) {
+        layout.setNotice(t(TEXT.loadFailed) + error.message, 'error');
+      }
+    }
+
+    async function saveAllSettings() {
+      layout.setNotice(t(TEXT.saving), 'info');
+      try {
+        const settingsPayload = collectSettingsPayload();
+
+        await AdminApp.requestJson('/api/data/settings', {
+          method: 'PUT',
+          body: settingsPayload,
+        });
+
+        state.settings = settingsPayload;
+        renderSkills();
+        renderNavItems();
+        layout.setNotice(t(TEXT.saved), 'success');
+      } catch (error) {
+        layout.setNotice(t(TEXT.saveFailed) + error.message, 'error');
+      }
+    }
+
+    document.getElementById('reload-settings-btn').addEventListener('click', function reloadSettings() {
+      loadAllSettings();
+    });
+
+    document.getElementById('save-settings-btn').addEventListener('click', function saveSettings() {
+      saveAllSettings();
+    });
+
+    document.getElementById('add-skill-btn').addEventListener('click', function addSkill() {
+      syncSkillsFromDom();
+      state.skills.push(normalizeSkill({ label: '', icon: '', color: '' }));
+      renderSkills();
+    });
+
+    document.getElementById('skills-list').addEventListener('click', function handleSkillListClick(event) {
+      const button = event.target.closest('[data-remove-skill]');
+      if (!button) {
+        return;
+      }
+      syncSkillsFromDom();
+      state.skills = state.skills.filter(function filterSkill(skill) {
+        return skill.id !== button.getAttribute('data-remove-skill');
+      });
+      renderSkills();
+    });
+
+    loadAllSettings();
+  </script>
+</body>
+</html>

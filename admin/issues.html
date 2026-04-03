@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>问题记录管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+            dark: {
+              bg: '#0a0a0a',
+              surface: '#111111',
+              border: '#1f1f1f',
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="/admin/admin-common.css">
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-[#0a0a0a] dark:text-gray-100">
+  <div id="admin-app"></div>
+
+  <script src="/admin/admin-common.js"></script>
+  <script>
+    if (!window.AdminApp || !AdminApp.requireAuth()) {
+      throw new Error('Missing admin auth context.');
+    }
+
+    const layout = AdminApp.mountPage({
+      active: 'issues',
+      title: '问题记录管理',
+      description: '管理开发过程中遇到的问题、故障和修复记录。',
+      actions: [
+        {
+          id: 'reload-issues-btn',
+          label: '重新加载',
+          className: 'rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800',
+        },
+        {
+          id: 'create-issue-btn',
+          label: '新建问题',
+          className: 'rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-colors hover:bg-indigo-700',
+        },
+      ],
+    });
+
+    layout.content.innerHTML = `
+      <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <article class="admin-panel metric-card p-5">
+          <div class="text-sm text-gray-500 dark:text-gray-400">总问题数</div>
+          <div id="metric-total-issues" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
+          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">系统中存储的所有问题记录。</div>
+        </article>
+        <article class="admin-panel metric-card p-5">
+          <div class="text-sm text-gray-500 dark:text-gray-400">已解决</div>
+          <div id="metric-resolved-issues" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
+          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">状态为已解决的问题数量。</div>
+        </article>
+        <article class="admin-panel metric-card p-5">
+          <div class="text-sm text-gray-500 dark:text-gray-400">持续观察</div>
+          <div id="metric-observing-issues" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
+          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">状态为持续观察的问题数量。</div>
+        </article>
+        <article class="admin-panel metric-card p-5">
+          <div class="text-sm text-gray-500 dark:text-gray-400">待解决</div>
+          <div id="metric-pending-issues" class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">--</div>
+          <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">状态为待解决的问题数量。</div>
+        </article>
+      </section>
+
+      <section class="admin-panel mt-6 p-6">
+        <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_220px_220px]">
+          <div>
+            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-search-input">搜索</label>
+            <input id="issue-search-input" class="input-control" type="search" placeholder="搜索问题标题、描述或标签">
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-status-filter">状态</label>
+            <select id="issue-status-filter" class="select-control">
+              <option value="all">全部状态</option>
+              <option value="resolved">已解决</option>
+              <option value="observing">持续观察</option>
+              <option value="pending">待解决</option>
+            </select>
+          </div>
+          <div>
+            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-priority-filter">优先级</label>
+            <select id="issue-priority-filter" class="select-control">
+              <option value="all">全部优先级</option>
+              <option value="high">高</option>
+              <option value="medium">中</option>
+              <option value="low">低</option>
+            </select>
+          </div>
+        </div>
+        <div id="issue-list" class="mt-6 space-y-4"></div>
+      </section>
+
+      <div id="issue-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm">
+        <div class="admin-panel w-full max-w-3xl p-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div class="admin-kicker text-gray-500 dark:text-gray-400">问题编辑器</div>
+              <h2 id="issue-modal-title" class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">创建问题</h2>
+            </div>
+            <button id="issue-modal-close" type="button" class="rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">关闭</button>
+          </div>
+          <form id="issue-form" class="mt-6 space-y-4" novalidate>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-title-input">标题</label>
+              <input id="issue-title-input" class="input-control" type="text" maxlength="200" required>
+            </div>
+            <div class="grid gap-4 md:grid-cols-2">
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-status-input">状态</label>
+                <select id="issue-status-input" class="select-control">
+                  <option value="pending">待解决</option>
+                  <option value="observing">持续观察</option>
+                  <option value="resolved">已解决</option>
+                </select>
+              </div>
+              <div>
+                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-priority-input">优先级</label>
+                <select id="issue-priority-input" class="select-control">
+                  <option value="medium">中</option>
+                  <option value="high">高</option>
+                  <option value="low">低</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-category-input">分类</label>
+              <input id="issue-category-input" class="input-control" type="text" maxlength="100" placeholder="环境配置、性能优化、业务逻辑等">
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-phenomenon-input">问题现象</label>
+              <textarea id="issue-phenomenon-input" class="textarea-control" rows="4" maxlength="800" placeholder="详细描述问题的具体表现和复现步骤"></textarea>
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-solution-input">修复步骤</label>
+              <textarea id="issue-solution-input" class="textarea-control" rows="6" maxlength="1500" placeholder="详细描述修复过程和解决方案"></textarea>
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-conclusion-input">结论</label>
+              <textarea id="issue-conclusion-input" class="textarea-control" rows="3" maxlength="500" placeholder="总结经验教训和预防措施"></textarea>
+            </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="issue-tags-input">标签</label>
+              <input id="issue-tags-input" class="input-control" type="text" maxlength="200" placeholder="用逗号分隔多个标签">
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+              <button id="issue-delete-btn" type="button" class="hidden rounded-xl border border-rose-200 px-4 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-50 dark:border-rose-900/50 dark:text-rose-300 dark:hover:bg-rose-500/10">删除</button>
+              <button type="submit" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-colors hover:bg-indigo-700">保存问题</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+
+    const state = {
+      issues: [],
+      editingId: '',
+      search: '',
+      statusFilter: 'all',
+      priorityFilter: 'all',
+    };
+
+    const elements = {
+      searchInput: document.getElementById('issue-search-input'),
+      statusFilter: document.getElementById('issue-status-filter'),
+      priorityFilter: document.getElementById('issue-priority-filter'),
+      list: document.getElementById('issue-list'),
+      modal: document.getElementById('issue-modal'),
+      modalTitle: document.getElementById('issue-modal-title'),
+      closeModalButton: document.getElementById('issue-modal-close'),
+      form: document.getElementById('issue-form'),
+      titleInput: document.getElementById('issue-title-input'),
+      statusInput: document.getElementById('issue-status-input'),
+      priorityInput: document.getElementById('issue-priority-input'),
+      categoryInput: document.getElementById('issue-category-input'),
+      phenomenonInput: document.getElementById('issue-phenomenon-input'),
+      solutionInput: document.getElementById('issue-solution-input'),
+      conclusionInput: document.getElementById('issue-conclusion-input'),
+      tagsInput: document.getElementById('issue-tags-input'),
+      deleteButton: document.getElementById('issue-delete-btn'),
+    };
+
+    function getStatusLabel(status) {
+      const labels = {
+        resolved: '已解决',
+        observing: '持续观察',
+        pending: '待解决',
+      };
+      return labels[status] || '未知';
+    }
+
+    function getPriorityLabel(priority) {
+      const labels = {
+        high: '高优先级',
+        medium: '常规问题',
+        low: '低优先级',
+      };
+      return labels[priority] || '未知';
+    }
+
+    function getPriorityClass(priority) {
+      const classes = {
+        high: 'bg-red-500/10 text-red-500',
+        medium: 'bg-gray-800 text-gray-500',
+        low: 'bg-blue-500/10 text-blue-500',
+      };
+      return classes[priority] || 'bg-gray-800 text-gray-500';
+    }
+
+    function syncMetrics() {
+      const totalIssues = state.issues.length;
+      const resolvedIssues = state.issues.filter(issue => issue.status === 'resolved').length;
+      const observingIssues = state.issues.filter(issue => issue.status === 'observing').length;
+      const pendingIssues = state.issues.filter(issue => issue.status === 'pending').length;
+
+      document.getElementById('metric-total-issues').textContent = String(totalIssues);
+      document.getElementById('metric-resolved-issues').textContent = String(resolvedIssues);
+      document.getElementById('metric-observing-issues').textContent = String(observingIssues);
+      document.getElementById('metric-pending-issues').textContent = String(pendingIssues);
+    }
+
+    function getFilteredIssues() {
+      const search = state.search.trim().toLowerCase();
+
+      return state.issues
+        .filter(issue => {
+          if (state.statusFilter !== 'all' && issue.status !== state.statusFilter) {
+            return false;
+          }
+          if (state.priorityFilter !== 'all' && issue.priority !== state.priorityFilter) {
+            return false;
+          }
+
+          if (!search) {
+            return true;
+          }
+
+          const haystack = [
+            issue.title,
+            issue.phenomenon,
+            issue.solution,
+            issue.conclusion,
+            issue.category,
+            issue.tags,
+          ].join(' ').toLowerCase();
+
+          return haystack.includes(search);
+        })
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+
+    function renderList() {
+      const issues = getFilteredIssues();
+
+      if (!issues.length) {
+        elements.list.innerHTML = `
+          <div class="rounded-2xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+            没有符合当前筛选条件的问题记录。
+          </div>
+        `;
+        return;
+      }
+
+      elements.list.innerHTML = issues.map(issue => {
+        const statusLabel = getStatusLabel(issue.status);
+        const priorityLabel = getPriorityLabel(issue.priority);
+        const priorityClass = getPriorityClass(issue.priority);
+        const date = new Date(issue.createdAt).toLocaleDateString('zh-CN');
+
+        return `
+          <article class="admin-panel overflow-hidden">
+            <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800">
+              <div class="flex items-start justify-between gap-4">
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="rounded px-2 py-0.5 text-[10px] font-bold ${priorityClass}">${priorityLabel}</span>
+                    <span class="text-xs text-gray-500">${date}</span>
+                  </div>
+                  <h2 class="mt-2 text-lg font-semibold text-gray-900 dark:text-white">${AdminApp.escapeHtml(issue.title)}</h2>
+                </div>
+                <div class="flex shrink-0 items-center gap-2">
+                  <button data-action="edit" data-id="${AdminApp.escapeHtml(issue.id)}" type="button" class="rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">编辑</button>
+                  <button data-action="delete" data-id="${AdminApp.escapeHtml(issue.id)}" type="button" class="rounded-xl border border-rose-200 px-3 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-50 dark:border-rose-900/50 dark:text-rose-300 dark:hover:bg-rose-500/10">删除</button>
+                </div>
+              </div>
+            </div>
+            <div class="grid gap-4 px-5 py-4 md:grid-cols-[minmax(0,1fr)_220px]">
+              <div>
+                <div class="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
+                  <span>分类: ${AdminApp.escapeHtml(issue.category || '未分类')}</span>
+                  <span>状态: ${statusLabel}</span>
+                </div>
+                <p class="text-sm leading-6 text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">${AdminApp.escapeHtml(issue.phenomenon || '')}</p>
+                ${issue.tags ? `<div class="flex flex-wrap gap-2"><span class="text-xs text-gray-500 dark:text-gray-400">标签:</span>${issue.tags.split(',').map(tag => `<span class="rounded-full bg-gray-800 px-2 py-0.5 text-[10px]">${AdminApp.escapeHtml(tag.trim())}</span>`).join('')}</div>` : ''}
+              </div>
+              <div>
+                <div class="rounded-2xl border border-dashed border-gray-200 p-4 dark:border-gray-700">
+                  <div class="text-xs uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">修复状态</div>
+                  <div class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">${statusLabel}</div>
+                </div>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function openModal(issue) {
+      const isEditing = !!issue;
+      state.editingId = isEditing ? String(issue.id) : '';
+
+      elements.modalTitle.textContent = isEditing ? '编辑问题' : '创建问题';
+      elements.titleInput.value = isEditing ? (issue.title || '') : '';
+      elements.statusInput.value = isEditing ? (issue.status || 'pending') : 'pending';
+      elements.priorityInput.value = isEditing ? (issue.priority || 'medium') : 'medium';
+      elements.categoryInput.value = isEditing ? (issue.category || '') : '';
+      elements.phenomenonInput.value = isEditing ? (issue.phenomenon || '') : '';
+      elements.solutionInput.value = isEditing ? (issue.solution || '') : '';
+      elements.conclusionInput.value = isEditing ? (issue.conclusion || '') : '';
+      elements.tagsInput.value = isEditing ? (issue.tags || '') : '';
+      elements.deleteButton.classList.toggle('hidden', !isEditing);
+
+      elements.modal.classList.remove('hidden');
+      elements.modal.classList.add('flex');
+      elements.titleInput.focus();
+    }
+
+    function closeModal() {
+      state.editingId = '';
+      elements.modal.classList.add('hidden');
+      elements.modal.classList.remove('flex');
+      elements.form.reset();
+    }
+
+    function getIssueById(issueId) {
+      return state.issues.find(issue => String(issue.id) === String(issueId)) || null;
+    }
+
+    async function saveIssue() {
+      const title = String(elements.titleInput.value || '').trim();
+      const status = elements.statusInput.value;
+      const priority = elements.priorityInput.value;
+      const category = String(elements.categoryInput.value || '').trim();
+      const phenomenon = String(elements.phenomenonInput.value || '').trim();
+      const solution = String(elements.solutionInput.value || '').trim();
+      const conclusion = String(elements.conclusionInput.value || '').trim();
+      const tags = String(elements.tagsInput.value || '').trim();
+
+      if (!title) {
+        layout.setNotice('问题标题不能为空。', 'error');
+        elements.titleInput.focus();
+        return;
+      }
+
+      if (!phenomenon) {
+        layout.setNotice('问题现象不能为空。', 'error');
+        elements.phenomenonInput.focus();
+        return;
+      }
+
+      const payload = {
+        title: title,
+        status: status,
+        priority: priority,
+        category: category,
+        phenomenon: phenomenon,
+        solution: solution,
+        conclusion: conclusion,
+        tags: tags,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const isEditing = !!state.editingId;
+
+      try {
+        layout.setNotice(isEditing ? '保存问题修改中...' : '创建问题中...', 'info');
+        if (isEditing) {
+          await AdminApp.requestJson('/api/data/issues/' + encodeURIComponent(state.editingId), {
+            method: 'PATCH',
+            body: payload,
+          });
+        } else {
+          await AdminApp.requestJson('/api/data/issues', {
+            method: 'POST',
+            body: payload,
+          });
+        }
+
+        closeModal();
+        await loadData(false);
+        layout.setNotice(isEditing ? '问题已更新。' : '问题已创建。', 'success');
+      } catch (error) {
+        layout.setNotice(error.message || '保存问题失败。', 'error');
+      }
+    }
+
+    async function deleteIssue(issueId) {
+      const issue = getIssueById(issueId);
+      if (!issue) {
+        return;
+      }
+
+      if (!window.confirm('删除 "' + (issue.title || issue.id) + '" 吗？')) {
+        return;
+      }
+
+      try {
+        layout.setNotice('删除问题中...', 'info');
+        await AdminApp.requestJson('/api/data/issues/' + encodeURIComponent(issueId), {
+          method: 'DELETE',
+        });
+        if (state.editingId === String(issueId)) {
+          closeModal();
+        }
+        await loadData(false);
+        layout.setNotice('问题已删除。', 'success');
+      } catch (error) {
+        layout.setNotice(error.message || '删除问题失败。', 'error');
+      }
+    }
+
+    async function loadData(showMessage) {
+      try {
+        if (showMessage !== false) {
+          layout.setNotice('加载问题数据中...', 'info');
+        }
+
+        const issues = await AdminApp.requestJson('/api/data/issues');
+        state.issues = Array.isArray(issues) ? issues : [];
+
+        syncMetrics();
+        renderList();
+
+        if (showMessage !== false) {
+          layout.setNotice('问题数据加载完成。', 'success');
+        }
+      } catch (error) {
+        layout.setNotice(error.message || '加载问题数据失败。', 'error');
+      }
+    }
+
+    document.getElementById('reload-issues-btn').addEventListener('click', function onReload() {
+      loadData(true);
+    });
+
+    document.getElementById('create-issue-btn').addEventListener('click', function onCreate() {
+      openModal(null);
+    });
+
+    elements.searchInput.addEventListener('input', function onSearch() {
+      state.search = elements.searchInput.value || '';
+      renderList();
+    });
+
+    elements.statusFilter.addEventListener('change', function onStatusFilter() {
+      state.statusFilter = elements.statusFilter.value || 'all';
+      renderList();
+    });
+
+    elements.priorityFilter.addEventListener('change', function onPriorityFilter() {
+      state.priorityFilter = elements.priorityFilter.value || 'all';
+      renderList();
+    });
+
+    elements.closeModalButton.addEventListener('click', closeModal);
+
+    elements.modal.addEventListener('click', function onModalClick(event) {
+      if (event.target === elements.modal) {
+        closeModal();
+      }
+    });
+
+    elements.form.addEventListener('submit', function onSubmit(event) {
+      event.preventDefault();
+      saveIssue();
+    });
+
+    elements.deleteButton.addEventListener('click', function onDeleteButton() {
+      if (state.editingId) {
+        deleteIssue(state.editingId);
+      }
+    });
+
+    elements.list.addEventListener('click', function onListClick(event) {
+      const button = event.target.closest('button[data-action][data-id]');
+      if (!button) {
+        return;
+      }
+
+      const action = button.getAttribute('data-action');
+      const issueId = button.getAttribute('data-id');
+
+      if (action === 'edit') {
+        openModal(getIssueById(issueId));
+        return;
+      }
+
+      if (action === 'delete') {
+        deleteIssue(issueId);
+      }
+    });
+
+    const unsubscribe = AdminApp.subscribeToDataChanges(function onDataChange() {
+      loadData(false);
+    });
+
+    window.addEventListener('beforeunload', unsubscribe);
+
+    loadData(true);
+  </script>
+</body>
+</html>
