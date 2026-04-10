@@ -223,7 +223,7 @@ const {
   openPost,
   selectCategory,
   selectTag,
-  syncFromHash,
+  syncFromPath,
 } = useBlogRouting({ posts, sections, categories, tags, visibleNavItems });
 
 const {
@@ -324,7 +324,7 @@ function tagSummary(ids) {
 
 async function refreshData(silent = false) {
   await loadData({ silent });
-  syncFromHash();
+  syncFromPath();
 }
 
 async function copyToClipboard(text) {
@@ -466,7 +466,7 @@ function handleCodeCopy(event) {
 }
 
 onMounted(async () => {
-  window.addEventListener('hashchange', syncFromHash);
+  window.addEventListener('popstate', syncFromPath);
   window.addEventListener('scroll', handleScroll, { passive: true });
   document.addEventListener('click', handleCodeCopy);
   await refreshData();
@@ -475,7 +475,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  window.removeEventListener('hashchange', syncFromHash);
+  window.removeEventListener('popstate', syncFromPath);
   window.removeEventListener('scroll', handleScroll);
   document.removeEventListener('click', handleCodeCopy);
   if (heroTimer) {

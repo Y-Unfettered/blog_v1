@@ -9,21 +9,21 @@ import {
   slugFromId,
 } from '../utils/blog';
 
-const VIEW_HASHES = {
-  home: '#/',
-  categories: '#/categories',
-  tags: '#/tags',
-  about: '#/about',
-  design: '#/design',
-  tools: '#/tools',
-  issues: '#/issues',
-  life: '#/life',
+const VIEW_PATHS = {
+  home: '/',
+  categories: '/categories',
+  tags: '/tags',
+  about: '/about',
+  design: '/design',
+  tools: '/tools',
+  issues: '/issues',
+  life: '/life',
 };
 
 function defaultListState() {
   return {
     view: 'home',
-    hash: '#/',
+    path: '/',
     selectedCategoryId: '',
     selectedTagId: '',
     searchQuery: '',
@@ -53,15 +53,15 @@ function splitPathSegments(path) {
     .map(decodeSegment);
 }
 
-function parseHashState(hashValue) {
-  const rawHash = String(hashValue || '#/').trim() || '#/';
-  const [hashPathRaw, hashQueryRaw = ''] = rawHash.split('?');
-  const hashPath = hashPathRaw || '#/';
+function parsePathState(pathValue) {
+  const rawPath = String(pathValue || '/').trim() || '/';
+  const [pathPathRaw, pathQueryRaw = ''] = rawPath.split('?');
+  const pathPath = pathPathRaw || '/';
   return {
-    rawHash,
-    hashPath,
-    path: normalizePath(hashPath),
-    params: new URLSearchParams(hashQueryRaw),
+    rawPath,
+    pathPath,
+    path: normalizePath(pathPath),
+    params: new URLSearchParams(pathQueryRaw),
   };
 }
 
@@ -80,10 +80,11 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
   const activeColumnPath = ref('');
   const activeColumnCategoryId = ref('');
 
-  function updateHash(nextHash) {
+  function updatePath(nextPath) {
     if (typeof window === 'undefined') return;
-    if (window.location.hash !== nextHash) {
-      window.location.hash = nextHash;
+    const currentPath = window.location.pathname + window.location.search;
+    if (currentPath !== nextPath) {
+      window.history.pushState(null, '', nextPath);
     }
   }
 
@@ -144,7 +145,7 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
     if (nextView !== 'home') {
       clearHomeFiltersOnly();
     }
-    updateHash(VIEW_HASHES[nextView] || '#/');
+    updatePath(VIEW_PATHS[nextView] || '/');
     scrollTop();
   }
 
@@ -156,7 +157,7 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
   function captureListState() {
     lastListState.value = {
       view: view.value,
-      hash: typeof window !== 'undefined' ? window.location.hash || '#/' : '#/',
+      path: typeof window !== 'undefined' ? window.location.pathname + window.location.search || '/' : '/',
       selectedCategoryId: selectedCategoryId.value,
       selectedTagId: selectedTagId.value,
       searchQuery: searchQuery.value,
@@ -223,7 +224,7 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
     activePostId.value = '';
     view.value = 'home';
     const slug = slugFromId(categories.value, categoryId);
-    updateHash(slug ? `#/category/${encodeURIComponent(slug)}` : '#/');
+    updatePath(slug ? `/category/${encodeURIComponent(slug)}` : '/');
     scrollTop();
   }
 
@@ -233,18 +234,18 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
     activePostId.value = '';
     view.value = 'home';
     const slug = slugFromId(tags.value, tagId);
-    updateHash(slug ? `#/tag/${encodeURIComponent(slug)}` : '#/');
+    updatePath(slug ? `/tag/${encodeURIComponent(slug)}` : '/');
     scrollTop();
   }
 
   function clearCategoryFilter() {
     selectedCategoryId.value = '';
-    updateHash('#/');
+    updatePath('/');
   }
 
   function clearTagFilter() {
     selectedTagId.value = '';
-    updateHash('#/');
+    updatePath('/');
   }
 
   function clearFilters() {
@@ -252,7 +253,7 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
     selectedCategoryId.value = '';
     selectedTagId.value = '';
     if (view.value === 'home') {
-      updateHash('#/');
+      updatePath('/');
     }
   }
 
@@ -288,51 +289,51 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
       window.open(href, '_blank');
       return;
     }
-    if (href.startsWith('#/category/')) {
-      const slug = decodeURIComponent(href.replace('#/category/', '').trim());
+    if (href.startsWith('/category/')) {
+      const slug = decodeURIComponent(href.replace('/category/', '').trim());
       const category = findCategoryBySlugOrName(slug);
       if (category) setCategoryFilter(category.id);
-      else updateHash(href);
+      else updatePath(href);
       return;
     }
-    if (href.startsWith('#/tag/')) {
-      const slug = decodeURIComponent(href.replace('#/tag/', '').trim());
+    if (href.startsWith('/tag/')) {
+      const slug = decodeURIComponent(href.replace('/tag/', '').trim());
       const tag = findTagBySlugOrName(slug);
       if (tag) setTagFilter(tag.id);
-      else updateHash(href);
+      else updatePath(href);
       return;
     }
-    if (href === '#/' || href === '#') {
+    if (href === '/' || href === '') {
       clearFilters();
       setView('home');
       return;
     }
-    if (href === '#/about') {
+    if (href === '/about') {
       setView('about');
       return;
     }
-    if (href === '#/design') {
+    if (href === '/design') {
       setView('design');
       return;
     }
-    if (href === '#/tools') {
+    if (href === '/tools') {
       setView('tools');
       return;
     }
-    if (href === '#/issues') {
+    if (href === '/issues') {
       setView('issues');
       return;
     }
-    if (href === '#/life') {
+    if (href === '/life') {
       setView('life');
       return;
     }
     if (href) {
       if (setColumnViewByPath(href)) {
-        updateHash(`#${normalizePath(href)}`);
+        updatePath(normalizePath(href));
         return;
       }
-      updateHash(href);
+      updatePath(href);
       return;
     }
     const fallback = findCategoryBySlugOrName(item?.label || '');
@@ -355,21 +356,21 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
 
   function isNavActive(item) {
     const href = normalizeNavHref(item);
-    if (!href || href === '#/' || href === '#') {
+    if (!href || href === '/' || href === '') {
       return view.value === 'home' && !selectedCategoryId.value;
     }
-    if (href === '#/about') return view.value === 'about';
-    if (href === '#/design') return view.value === 'design';
-    if (href === '#/tools') return view.value === 'tools';
-    if (href === '#/issues') return view.value === 'issues';
-    if (href === '#/life') return view.value === 'life';
-    if (href.startsWith('#/category/')) {
-      const slug = decodeURIComponent(href.replace('#/category/', '').trim());
+    if (href === '/about') return view.value === 'about';
+    if (href === '/design') return view.value === 'design';
+    if (href === '/tools') return view.value === 'tools';
+    if (href === '/issues') return view.value === 'issues';
+    if (href === '/life') return view.value === 'life';
+    if (href.startsWith('/category/')) {
+      const slug = decodeURIComponent(href.replace('/category/', '').trim());
       const category = findCategoryBySlugOrName(slug);
       return category ? selectedCategoryId.value === category.id : false;
     }
-    if (href.startsWith('#/tag/')) {
-      const slug = decodeURIComponent(href.replace('#/tag/', '').trim());
+    if (href.startsWith('/tag/')) {
+      const slug = decodeURIComponent(href.replace('/tag/', '').trim());
       const tag = findTagBySlugOrName(slug);
       return tag ? selectedTagId.value === tag.id : false;
     }
@@ -386,7 +387,8 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
     }
     activePostId.value = String(post.id).trim();
     view.value = 'detail';
-    updateHash(buildPostHash(post, sections.value, categories.value));
+    const postPath = buildPostHash(post, sections.value, categories.value);
+    updatePath(postPath);
     scrollTop();
   }
 
@@ -413,21 +415,21 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
       resetColumnState();
       if (selectedCategoryId.value) {
         const slug = slugFromId(categories.value, selectedCategoryId.value);
-        updateHash(`#/category/${encodeURIComponent(slug)}`);
+        updatePath(`/category/${encodeURIComponent(slug)}`);
       } else if (selectedTagId.value) {
         const slug = slugFromId(tags.value, selectedTagId.value);
-        updateHash(`#/tag/${encodeURIComponent(slug)}`);
+        updatePath(`/tag/${encodeURIComponent(slug)}`);
       } else {
-        updateHash('#/');
+        updatePath('/');
       }
     } else if (targetView === 'design') {
       setView('design');
       designCategoryId.value = state.designCategoryId || '';
       searchQuery.value = state.searchQuery || '';
     } else if (targetView === 'column') {
-      const path = state.activeColumnPath || state.hash || '';
+      const path = state.activeColumnPath || state.path || '';
       if (path && setColumnViewByPath(path)) {
-        updateHash(`#${normalizePath(path)}`);
+        updatePath(normalizePath(path));
       } else {
         setView('categories');
       }
@@ -437,7 +439,7 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
     } else if (targetView === 'life') {
       view.value = 'life';
       activePostId.value = '';
-      updateHash('#/life');
+      updatePath('/life');
     } else {
       setView(targetView);
     }
@@ -446,37 +448,16 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
     restoreListScroll(state.scrollY || 0);
   }
 
-  function syncFromHash() {
+  function syncFromPath() {
     if (typeof window === 'undefined') return;
 
-    const { hashPath, path, params } = parseHashState(window.location.hash || '#/');
-    const pathname = window.location.pathname;
+    const path = window.location.pathname + window.location.search;
+    const { path: normalizedPath, params } = parsePathState(path);
     
-    // Handle pathname to hash routing
-    if (pathname !== '/' && pathname !== '/index.html') {
-      const path = pathname.replace(/^\//, '');
-      const nav = visibleNavItems.value.find((item) => {
-        const itemPath = normalizePath(item.href).toLowerCase();
-        const itemLabel = String(item.label || '').toLowerCase();
-        return itemPath.includes(path) || itemLabel.includes(path);
-      });
-      
-      if (nav) {
-        const targetHash = `#${normalizePath(nav.href)}`;
-        if (hashPath !== targetHash) {
-          // Use replaceState to update both pathname and hash
-          const url = new URL(window.location.href);
-          url.pathname = '/';
-          url.hash = targetHash;
-          window.history.replaceState(null, '', url.toString());
-          return;
-        }
-      }
-    }
     const detailPostId = String(params.get('id') || '').trim();
 
-    if (hashPath.startsWith('#/post/')) {
-      const legacySlug = decodeURIComponent(hashPath.replace('#/post/', '').trim());
+    if (normalizedPath.startsWith('/post/')) {
+      const legacySlug = decodeURIComponent(normalizedPath.replace('/post/', '').trim());
       const legacyPost = posts.value.find((post) => String(post.slug || '').trim() === legacySlug)
         || posts.value.find((post) => String(post.id || '').trim() === detailPostId);
 
@@ -489,10 +470,10 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
 
     if (
       detailPostId &&
-      path !== '/' &&
-      !path.startsWith('/category/') &&
-      !path.startsWith('/tag/') &&
-      !['/about', '/categories', '/tags', '/design', '/tools', '/issues', '/life'].includes(path)
+      normalizedPath !== '/' &&
+      !normalizedPath.startsWith('/category/') &&
+      !normalizedPath.startsWith('/tag/') &&
+      !['/about', '/categories', '/tags', '/design', '/tools', '/issues', '/life'].includes(normalizedPath)
     ) {
       const matchedPost = posts.value.find((post) => String(post.id || '').trim() === detailPostId);
       if (matchedPost) {
@@ -504,59 +485,59 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
 
     activePostId.value = '';
 
-    if (hashPath.startsWith('#/category/')) {
-      const slug = decodeURIComponent(hashPath.replace('#/category/', '').trim());
+    if (normalizedPath.startsWith('/category/')) {
+      const slug = decodeURIComponent(normalizedPath.replace('/category/', '').trim());
       const category = findCategoryBySlugOrName(slug);
       if (category) selectedCategoryId.value = category.id;
       selectedTagId.value = '';
       view.value = 'home';
       return;
     }
-    if (hashPath.startsWith('#/tag/')) {
-      const slug = decodeURIComponent(hashPath.replace('#/tag/', '').trim());
+    if (normalizedPath.startsWith('/tag/')) {
+      const slug = decodeURIComponent(normalizedPath.replace('/tag/', '').trim());
       const tag = findTagBySlugOrName(slug);
       if (tag) selectedTagId.value = tag.id;
       selectedCategoryId.value = '';
       view.value = 'home';
       return;
     }
-    if (hashPath === '#/categories') {
+    if (normalizedPath === '/categories') {
       clearHomeFiltersOnly();
       view.value = 'categories';
       return;
     }
-    if (hashPath === '#/tags') {
+    if (normalizedPath === '/tags') {
       clearHomeFiltersOnly();
       view.value = 'tags';
       return;
     }
-    if (hashPath === '#/about') {
+    if (normalizedPath === '/about') {
       clearHomeFiltersOnly();
       view.value = 'about';
       return;
     }
-    if (hashPath === '#/design') {
+    if (normalizedPath === '/design') {
       clearHomeFiltersOnly();
       view.value = 'design';
       return;
     }
-    if (hashPath === '#/tools') {
+    if (normalizedPath === '/tools') {
       clearHomeFiltersOnly();
       view.value = 'tools';
       return;
     }
-    if (hashPath === '#/issues') {
+    if (normalizedPath === '/issues') {
       clearHomeFiltersOnly();
       view.value = 'issues';
       return;
     }
-    if (hashPath === '#/life') {
+    if (normalizedPath === '/life') {
       clearHomeFiltersOnly();
       view.value = 'life';
       return;
     }
 
-    if (setColumnViewByPath(path)) {
+    if (setColumnViewByPath(normalizedPath)) {
       return;
     }
 
@@ -595,6 +576,6 @@ export function useBlogRouting({ posts, sections, categories, tags, visibleNavIt
     openPost,
     selectCategory,
     selectTag,
-    syncFromHash,
+    syncFromPath,
   };
 }

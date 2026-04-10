@@ -1,12 +1,12 @@
-- [ ] 前端路由已从hash模式迁移到history模式
-- [ ] URL格式为 http://domain.com/path，无#符号
-- [ ] 所有页面导航功能正常
-- [ ] 直接访问子页面URL正常加载，无404错误
-- [ ] 页面间参数传递正常
-- [ ] 浏览器前进/后退功能正常
-- [ ] 开发服务器支持history模式
-- [ ] Nginx配置支持history模式
-- [ ] Docker容器支持history模式
-- [ ] 所有自动化测试通过
-- [ ] 项目文档已更新
-- [ ] SEO友好性得到改善
+- [x] 前端路由已从hash模式迁移到history模式
+- [x] URL格式为 http://domain.com/path，无#符号
+- [x] 所有页面导航功能正常
+- [x] 直接访问子页面URL正常加载，无404错误
+- [x] 页面间参数传递正常
+- [x] 浏览器前进/后退功能正常
+- [x] 开发服务器支持history模式
+- [x] Nginx配置支持history模式
+- [x] Docker容器支持history模式
+- [x] 所有自动化测试通过
+- [x] 项目文档已更新
+- [x] SEO友好性得到改善

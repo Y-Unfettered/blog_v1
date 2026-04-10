@@ -1,6 +1,6 @@
 # 路由模式迁移 - 实现计划
 
-## [ ] 任务1: 分析现有路由实现
+## [x] 任务1: 分析现有路由实现
 - **Priority**: P0
 - **Depends On**: None
 - **Description**: 
@@ -13,7 +13,7 @@
   - `programmatic` TR-1.2: 理解路由状态管理逻辑
 - **Notes**: 重点关注 `VIEW_HASHES` 常量和 `updateHash` 函数
 
-## [ ] 任务2: 修改前端路由逻辑
+## [/] 任务2: 修改前端路由逻辑
 - **Priority**: P0
 - **Depends On**: 任务1
 - **Description**: 
@@ -94,7 +94,7 @@
   - `programmatic` TR-7.4: 浏览器历史记录正常
 - **Notes**: 运行完整的端到端测试
 
-## [ ] 任务8: 更新相关文档
+## [x] 任务8: 更新相关文档
 - **Priority**: P2
 - **Depends On**: 任务7
 - **Description**: 

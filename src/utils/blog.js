@@ -82,8 +82,11 @@ export function normalizePath(value) {
 export function normalizeNavHref(item) {
   if (!item || !item.href) return '';
   let href = String(item.href).trim();
-  if (!href.startsWith('#')) {
-    href = href.startsWith('/') ? `#${href}` : `#/${href}`;
+  if (href.startsWith('#')) {
+    href = href.slice(1);
+  }
+  if (!href.startsWith('/')) {
+    href = `/${href}`;
   }
   return href;
 }
@@ -101,7 +104,7 @@ export function postPathFromSlug(slug) {
 export function isColumnNavItem(item) {
   if (!item) return false;
   const path = normalizePath(item.href).toLowerCase();
-  if (!path || path === '/' || path === '#/' || path === '#') return false;
+  if (!path || path === '/') return false;
   if (path.includes('/about')) return false;
   return true;
 }
@@ -284,7 +287,7 @@ export function resolvePostSectionPath(post = {}, sections = [], categories = []
 
 export function buildPostHash(post = {}, sections = [], categories = []) {
   const postId = extractId(post.id);
-  if (!postId) return '#/';
+  if (!postId) return '/';
 
   const sectionPath = resolvePostSectionPath(post, sections, categories);
   const primaryCategory = resolvePrimaryCategory(post, categories);
@@ -302,11 +305,11 @@ export function buildPostHash(post = {}, sections = [], categories = []) {
     pathSegments.push(categorySlug);
   }
 
-  const baseHash = pathSegments.length
-    ? `#/${pathSegments.map((segment) => encodeURIComponent(segment)).join('/')}`
-    : '#/post';
+  const basePath = pathSegments.length
+    ? `/${pathSegments.map((segment) => encodeURIComponent(segment)).join('/')}`
+    : '/post';
 
-  return `${baseHash}?id=${encodeURIComponent(postId)}`;
+  return `${basePath}?id=${encodeURIComponent(postId)}`;
 }
 
 export function cloneDefaultAbout() {

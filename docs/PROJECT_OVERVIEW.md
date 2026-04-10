@@ -95,6 +95,13 @@ API → useBlogData → useBlogComputedState → 组件
 3. **计算状态**：`useBlogComputedState` 提供计算后的数据
 4. **组件**：接收计算后的数据并渲染界面
 
+### 路由系统
+
+- **模式**：使用 history 模式（无 # 符号的 URL）
+- **路由管理**：`useBlogRouting` 组合式函数处理路由逻辑
+- **URL 格式**：`http://domain.com/path`（如 `http://domain.com/design`）
+- **服务器配置**：支持直接访问子页面，无 404 错误
+
 ### 核心模块
 
 #### 1. 数据管理

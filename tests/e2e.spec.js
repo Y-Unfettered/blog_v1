@@ -26,7 +26,7 @@ test.describe('端到端测试', () => {
     
     // 3. 测试导航到生活随笔页面
     await page.click('text=生活随笔');
-    await expect(page.url()).toContain('/#/life');
+    await expect(page.url()).toContain('/life');
     
     // 检查生活随笔页面内容
     await page.waitForLoadState('domcontentloaded');
@@ -52,7 +52,7 @@ test.describe('端到端测试', () => {
     
     // 6. 测试返回首页
     await page.click('text=首页');
-    await expect(page.url()).toContain('/#/');
+    await expect(page.url()).toContain('/');
   });
 
   test('响应式设计测试', async ({ page }) => {

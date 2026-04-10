@@ -32,11 +32,11 @@ test.describe('前端页面测试', () => {
     
     // 测试导航到生活随笔
     await page.click('text=生活随笔');
-    await expect(page.url()).toContain('/#/life');
+    await expect(page.url()).toContain('/life');
     
     // 测试导航到首页
     await page.click('text=首页');
-    await expect(page.url()).toContain('/#/');
+    await expect(page.url()).toContain('/');
   });
 
   test('响应式设计测试', async ({ page }) => {
