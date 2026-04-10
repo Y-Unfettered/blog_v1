@@ -1,0 +1,31 @@
+{
+  "siteName": "DevLog_",
+  "siteDescription": "一个开发者的技术博客",
+  "siteUrl": "https://example.com",
+  "author": "Developer",
+  "email": "developer@example.com",
+  "github": "https://github.com/developer",
+  "twitter": "https://twitter.com/developer",
+  "markdownTheme": "default",
+  "profile": {
+    "name": "Developer",
+    "bio": "热爱技术，分享知识",
+    "avatar": "https://picsum.photos/seed/avatar/200/200",
+    "cover": "https://picsum.photos/seed/cover/1400/400",
+    "email": "developer@example.com",
+    "github": "https://github.com/developer",
+    "twitter": "https://twitter.com/developer"
+  },
+  "about": {
+    "title": "关于我",
+    "content": "这是一个关于页面的示例内容。",
+    "skillsTitle": "技术栈",
+    "skills": [
+      {"name": "Vue.js", "icon": "vue", "color": "#41B883"},
+      {"name": "Node.js", "icon": "nodejs", "color": "#339933"},
+      {"name": "TypeScript", "icon": "typescript", "color": "#3178C6"},
+      {"name": "Python", "icon": "python", "color": "#3776AB"},
+      {"name": "Dogfood", "icon": "testtube", "color": "#10b981"}
+    ]
+  }
+}

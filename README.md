@@ -33,8 +33,14 @@ my_blog/
 │   └── main.js             # 入口文件
 ├── scripts/                # 后端脚本
 │   ├── admin-server.cjs    # API服务器
-│   └── init-data.cjs       # 数据初始化脚本
-├── data/seed/              # 数据模板
+│   ├── init-data.cjs       # 数据初始化脚本
+│   └── setup-data.cjs      # 数据管理工具
+├── data/
+│   ├── example/            # 示例数据（会提交到Git）
+│   └── seed/               # 真实数据（不会提交到Git）
+├── docs/                   # 文档
+│   ├── DEVELOPMENT.md      # 开发指南
+│   └── DATA_MANAGEMENT.md # 数据管理指南
 ├── deploy/                 # Docker配置
 │   ├── Dockerfile.api      # API容器配置
 │   ├── Dockerfile.web      # 前端容器配置
@@ -67,9 +73,20 @@ cp .env.example .env
 
 ### 2. 初始化数据
 
+首次使用时，从示例数据初始化：
+
 ```bash
-npm run init:data
+npm run setup:data
 ```
+
+这会将 `data/example/` 中的示例数据复制到 `data/seed/` 目录。
+
+**数据管理命令：**
+- `npm run setup:data` - 设置数据（跳过已存在的文件）
+- `npm run reset:data` - 重置为示例数据（覆盖所有文件）
+- `npm run backup:data` - 备份当前数据
+
+详细说明请查看 [数据管理指南](docs/DATA_MANAGEMENT.md)。
 
 ### 3. 启动前端开发服务器
 
@@ -108,20 +125,55 @@ docker-compose up -d
 
 ## 数据管理
 
+### 重要说明
+
+- **`data/example/`** - 示例数据（会提交到Git）
+- **`data/seed/`** - 真实数据（不会提交到Git）
+- **`backups/`** - 数据备份（不会提交到Git）
+
+### 数据文件
+
 所有数据存储在 `data/seed/` 目录中，包括：
 - `posts.json` - 文章数据
 - `categories.json` - 分类数据
 - `tags.json` - 标签数据
+- `sections.json` - 栏目数据
 - `nav.json` - 导航数据
 - `settings.json` - 站点设置
+- `graphics.json` - 设计创作
 - `issues.json` - 问题记录
 - `tools.json` - 工具分享
+
+### 快速命令
+
+```bash
+# 初始化示例数据
+npm run setup:data
+
+# 重置为示例数据（覆盖所有文件）
+npm run reset:data
+
+# 备份当前数据
+npm run backup:data
+
+# 验证数据
+npm run validate:data
+```
+
+详细说明请查看 [数据管理指南](docs/DATA_MANAGEMENT.md)。
+
+## 文档
+
+- [开发指南](docs/DEVELOPMENT.md) - 详细的开发环境搭建和工作流说明
+- [数据管理指南](docs/DATA_MANAGEMENT.md) - 数据管理和Git忽略配置说明
 
 ## 注意事项
 
 1. 生产环境部署前，请修改 `.env` 文件中的配置
-2. 定期备份 `data/` 目录中的数据
+2. 定期备份数据：`npm run backup:data`
 3. 后台登录密码应在生产环境中修改
+4. 真实数据存储在 `data/seed/`，不会被提交到Git
+5. 示例数据存储在 `data/example/`，会被提交到Git
 
 ## 许可证
 

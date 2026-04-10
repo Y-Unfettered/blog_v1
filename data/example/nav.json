@@ -1,0 +1,9 @@
+[
+  {"id":"1","label":"首页","url":"/","icon":"home","order":1,"visible":true},
+  {"id":"2","label":"设计创作","url":"/design","icon":"palette","order":2,"visible":true},
+  {"id":"3","label":"技术笔记","url":"/tech","icon":"code","order":3,"visible":true},
+  {"id":"4","label":"工具分享","url":"/tools","icon":"tool","order":4,"visible":true},
+  {"id":"5","label":"问题记录","url":"/issues","icon":"alert-circle","order":5,"visible":true},
+  {"id":"6","label":"生活随笔","url":"/life","icon":"coffee","order":6,"visible":true},
+  {"id":"7","label":"关于我","url":"/about","icon":"user","order":7,"visible":true}
+]

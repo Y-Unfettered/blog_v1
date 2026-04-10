@@ -1,0 +1,7 @@
+[
+  {"id":"1","sectionId":"1","name":"AI ART","slug":"ai-art","description":"AI 生成的艺术作品","color":"#FF6B6B","icon":"brush","order":1},
+  {"id":"2","sectionId":"1","name":"灵感收藏","slug":"inspiration","description":"收集的灵感作品","color":"#FF8E72","icon":"star","order":2},
+  {"id":"11","sectionId":"2","name":"知识库","slug":"knowledge-base","description":"技术知识库文章","color":"#4ECDC4","icon":"database","order":1},
+  {"id":"41","sectionId":"5","name":"读书心得","slug":"book-reviews","description":"读书笔记和心得","color":"#95E1D3","icon":"book-open","order":1},
+  {"id":"43","sectionId":"5","name":"生活随笔","slug":"life-notes","description":"生活随想","color":"#DCEDC8","icon":"feather","order":3}
+]

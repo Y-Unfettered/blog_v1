@@ -29,7 +29,10 @@ dist-ssr
 *.sw?
 
 # Data files
-data/*.json
 data/seed/*.json
+data/*.json
+!data/example/
 backups/
 .tmp-*/
+performance-logs/
+dogfood-output/

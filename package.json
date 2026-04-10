@@ -13,7 +13,11 @@
     "smoke:test": "node scripts/smoke-test.cjs",
     "check": "node scripts/lint-project.cjs && node scripts/validate-data.cjs && vite build && node scripts/smoke-test.cjs",
     "init:data": "node scripts/init-data.cjs",
-    "admin:web": "node scripts/admin-server.cjs"
+    "admin:web": "node scripts/admin-server.cjs",
+    "performance:monitor": "node scripts/performance-monitor.js",
+    "setup:data": "node scripts/setup-data.cjs",
+    "reset:data": "node scripts/setup-data.cjs reset",
+    "backup:data": "node scripts/setup-data.cjs backup"
   },
   "dependencies": {
     "@iconify/vue": "^5.0.0",
@@ -25,6 +29,7 @@
     "vue": "^3.4.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4.2.1",
     "@vitejs/plugin-vue": "^6.0.3",
     "autoprefixer": "^10.4.27",

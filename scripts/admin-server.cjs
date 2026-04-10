@@ -1091,7 +1091,9 @@ function handleStaticRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   let pathname = url.pathname;
 
-  if (pathname === '/admin' || pathname === '/admin/') {
+  if (pathname === '/' || pathname === '/index.html') {
+    pathname = '/index.html';
+  } else if (pathname === '/admin' || pathname === '/admin/') {
     pathname = '/admin/index.html';
   }
 
@@ -1100,7 +1102,12 @@ function handleStaticRequest(req, res) {
   }
 
   const relativePath = pathname.replace(/^\/+/, '');
-  const filePath = path.join(__dirname, '..', relativePath);
+  let filePath;
+  if (pathname.startsWith('/admin/')) {
+    filePath = path.join(__dirname, '..', relativePath);
+  } else {
+    filePath = path.join(__dirname, '..', 'dist', relativePath);
+  }
 
   if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
     sendText(res, 404, 'File not found');

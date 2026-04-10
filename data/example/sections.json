@@ -1,0 +1,7 @@
+[
+  {"id":"1","name":"设计创作","slug":"design","url":"/design","icon":"palette","color":"#FF6B6B","order":1,"enabled":true},
+  {"id":"2","name":"技术笔记","slug":"tech","url":"/tech","icon":"code","color":"#4ECDC4","order":2,"enabled":true},
+  {"id":"3","name":"工具分享","slug":"tools","url":"/tools","icon":"tool","color":"#FFD93D","order":3,"enabled":true},
+  {"id":"4","name":"问题记录","slug":"issues","url":"/issues","icon":"alert-circle","color":"#FF8E72","order":4,"enabled":true},
+  {"id":"5","name":"生活随笔","slug":"life","url":"/life","icon":"coffee","color":"#95E1D3","order":5,"enabled":true}
+]
