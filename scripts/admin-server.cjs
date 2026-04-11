@@ -4,6 +4,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 require('dotenv').config();
 
@@ -1068,6 +1069,23 @@ async function handleApiRequest(req, res) {
       sendJson(res, 200, data);
     } catch (error) {
       sendJson(res, 500, { error: 'Read failed', message: 'Failed to read data.' });
+    }
+    return;
+  }
+
+  if (pathname === '/api/admin/update' && req.method === 'POST') {
+    const decoded = requireAuth(req, res);
+    if (!decoded) {
+      return;
+    }
+    
+    try {
+      // 执行git pull命令
+      execSync('git pull', { cwd: path.join(__dirname, '..'), stdio: 'inherit' });
+      
+      sendJson(res, 200, { success: true, message: 'Code updated successfully!' });
+    } catch (error) {
+      sendJson(res, 500, { error: 'Update failed', message: error.message });
     }
     return;
   }

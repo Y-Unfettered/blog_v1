@@ -276,6 +276,10 @@
     ['Publishing...', '\u6b63\u5728\u53d1\u5e03...'],
     ['Update & Publish', '\u66f4\u65b0\u5e76\u53d1\u5e03'],
     ['Ready to create a new post.', '\u5df2\u51c6\u5907\u597d\u521b\u5efa\u65b0\u6587\u7ae0\u3002'],
+    ['Are you sure you want to update the code? This will pull the latest changes from GitHub and may require a service restart.', '\u786e\u5b9a\u8981\u66f4\u65b0\u4ee3\u7801\u5417\uff1f\u8fd9\u5c06\u4eceGitHub\u62c9\u53d6\u6700\u65b0\u66f4\u6539\uff0c\u53ef\u80fd\u9700\u8981\u91cd\u542f\u670d\u52a1\u3002'],
+    ['Updating code from GitHub...', '\u6b63\u5728\u4eceGitHub\u66f4\u65b0\u4ee3\u7801...'],
+    ['Code updated successfully! Please restart the service to apply changes.', '\u4ee3\u7801\u66f4\u65b0\u6210\u529f\uff01\u8bf7\u91cd\u542f\u670d\u52a1\u4ee5\u5e94\u7528\u66f4\u6539\u3002'],
+    ['Failed to update code: ', '\u4ee3\u7801\u66f4\u65b0\u5931\u8d25\uff1a'],
   ];
 
   const UI_TEXT_PATTERNS = [
@@ -556,6 +560,30 @@
 
   function toggleTheme() {
     setTheme(getTheme() === 'dark' ? 'light' : 'dark');
+  }
+
+  async function updateCode() {
+    const notice = document.getElementById('admin-notice');
+    if (notice) {
+      notice.className = 'notice show notice-info';
+      notice.textContent = translate('Updating code from GitHub...', getLocale());
+    }
+
+    try {
+      const response = await requestJson('/api/admin/update', {
+        method: 'POST'
+      });
+      
+      if (notice) {
+        notice.className = 'notice show notice-success';
+        notice.textContent = translate('Code updated successfully! Please restart the service to apply changes.', getLocale());
+      }
+    } catch (error) {
+      if (notice) {
+        notice.className = 'notice show notice-error';
+        notice.textContent = translate('Failed to update code: ' + error.message, getLocale());
+      }
+    }
   }
 
   async function requestJson(url, options) {
@@ -911,6 +939,11 @@
           '</div>' +
           '<div class="flex items-center gap-3">' +
             '<button id="admin-locale-toggle" type="button" class="rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"></button>' +
+            '<button id="admin-update-toggle" type="button" class="rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">' +
+              '<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>' +
+              '</svg>' +
+            '</button>' +
             '<button id="admin-theme-toggle" type="button" class="rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">' +
               '<svg id="admin-theme-icon" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"></svg>' +
             '</button>' +
@@ -940,6 +973,15 @@
     document.getElementById('admin-locale-toggle').addEventListener('click', toggleLocale);
     document.getElementById('admin-theme-toggle').addEventListener('click', toggleTheme);
     document.getElementById('admin-logout').addEventListener('click', logout);
+    
+    const updateButton = document.getElementById('admin-update-toggle');
+    if (updateButton) {
+      updateButton.addEventListener('click', function() {
+        if (confirm(translate('Are you sure you want to update the code? This will pull the latest changes from GitHub and may require a service restart.', getLocale()))) {
+          updateCode();
+        }
+      });
+    }
 
     if (Array.isArray(config.actions)) {
       config.actions.forEach(function(action) {
@@ -996,5 +1038,6 @@
     toggleTheme: toggleTheme,
     translate: translate,
     translateUiString: translateUiString,
+    updateCode: updateCode,
   };
 })();

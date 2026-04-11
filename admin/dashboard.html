@@ -112,6 +112,11 @@
           external: true,
           className: 'rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800',
         },
+        {
+          id: 'update-code-btn',
+          label: { en: 'Update Code', zh: '更新代码' },
+          className: 'rounded-xl bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-rose-500/20 transition-colors hover:bg-rose-700',
+        },
       ],
     });
 
@@ -362,6 +367,29 @@
     });
 
     loadDashboard();
+
+    // 代码更新功能
+    document.getElementById('update-code-btn').addEventListener('click', async () => {
+      if (!confirm('确定要更新代码吗？这将会拉取最新的代码并可能重启服务。')) {
+        return;
+      }
+
+      try {
+        layout.setNotice(t({ en: 'Updating code...', zh: '正在更新代码...' }), 'info');
+        
+        const response = await AdminApp.requestJson('/api/admin/update', {
+          method: 'POST'
+        });
+        
+        if (response.success) {
+          layout.setNotice(t({ en: 'Code updated successfully! Please refresh the page to see changes.', zh: '代码更新成功！请刷新页面查看更改。' }), 'success');
+        } else {
+          layout.setNotice(t({ en: 'Code update failed: ', zh: '代码更新失败：' }) + (response.message || response.error), 'error');
+        }
+      } catch (error) {
+        layout.setNotice(t({ en: 'Update failed: ', zh: '更新失败：' }) + error.message, 'error');
+      }
+    });
   </script>
 </body>
 </html>
