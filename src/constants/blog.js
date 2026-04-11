@@ -4,13 +4,13 @@ export const HOME_LIMIT = 10;
 export const COLUMN_PAGE_SIZE = 5;
 
 export const DEFAULT_NAV = [
-  { id: 'nav-home', label: '首页', href: '#/' },
-  { id: 'nav-design', label: '设计创作', href: '#/design' },
-  { id: 'nav-tech', label: '技术笔记', href: '#/tech' },
-  { id: 'nav-tools', label: '工具分享', href: '#/tools' },
-  { id: 'nav-issues', label: '问题记录', href: '#/issues' },
-  { id: 'nav-life', label: '生活随笔', href: '#/life' },
-  { id: 'nav-about', label: '关于我', href: '#/about' },
+  { id: 'nav-home', label: '首页', href: '/' },
+  { id: 'nav-design', label: '设计创作', href: '/design' },
+  { id: 'nav-tech', label: '技术笔记', href: '/tech' },
+  { id: 'nav-tools', label: '工具分享', href: '/tools' },
+  { id: 'nav-issues', label: '问题记录', href: '/issues' },
+  { id: 'nav-life', label: '生活随笔', href: '/life' },
+  { id: 'nav-about', label: '关于我', href: '/about' },
 ];
 
 export const DEFAULT_COLUMN_IMAGES = [

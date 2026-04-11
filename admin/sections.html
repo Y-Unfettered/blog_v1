@@ -141,6 +141,17 @@
                 <input id="section-icon-input" class="input-control" type="text" maxlength="60" placeholder="palette, code, alert-circle">
               </div>
             </div>
+            <div>
+              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300" for="section-style-input">Page Style</label>
+              <select id="section-style-input" class="select-control">
+                <option value="default">Default</option>
+                <option value="design">设计创作</option>
+                <option value="tech">技术笔记</option>
+                <option value="tools">工具分享</option>
+                <option value="issues">问题记录</option>
+                <option value="life">生活随笔</option>
+              </select>
+            </div>
             <div class="flex items-center gap-3 rounded-2xl border border-dashed border-gray-200 px-4 py-3 dark:border-gray-700">
               <input id="section-enabled-input" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" type="checkbox" checked>
               <label class="text-sm font-medium text-gray-700 dark:text-gray-300" for="section-enabled-input">Enabled</label>
@@ -197,6 +208,7 @@
       orderInput: document.getElementById('section-order-input'),
       colorInput: document.getElementById('section-color-input'),
       iconInput: document.getElementById('section-icon-input'),
+      styleInput: document.getElementById('section-style-input'),
       enabledInput: document.getElementById('section-enabled-input'),
       descriptionInput: document.getElementById('section-description-input'),
       deleteButton: document.getElementById('section-delete-btn'),
@@ -366,6 +378,7 @@
                   <div class="mt-2 flex flex-wrap gap-2 text-sm text-gray-500 dark:text-gray-400">
                     <span>URL: ${AdminApp.escapeHtml(section.url || ('/' + (section.slug || section.id)))}</span>
                     <span>Icon: ${AdminApp.escapeHtml(section.icon || 'none')}</span>
+                    <span>Style: ${AdminApp.escapeHtml(section.style || 'default')}</span>
                     <span>Order: ${AdminApp.escapeHtml(section.order || '--')}</span>
                   </div>
                 </div>
@@ -419,6 +432,7 @@
       elements.orderInput.value = isEditing ? String(section.order || '') : '';
       elements.colorInput.value = normalizeColor(isEditing ? section.color : '#6366f1');
       elements.iconInput.value = isEditing ? (section.icon || '') : '';
+      elements.styleInput.value = isEditing ? (section.style || 'default') : 'default';
       elements.enabledInput.checked = isEditing ? section.enabled !== false : true;
       elements.descriptionInput.value = isEditing ? (section.description || '') : '';
       elements.deleteButton.classList.toggle('hidden', !isEditing);
@@ -435,6 +449,7 @@
       elements.modal.classList.remove('flex');
       elements.form.reset();
       elements.colorInput.value = '#6366f1';
+      elements.styleInput.value = 'default';
       elements.enabledInput.checked = true;
       updatePreview();
     }
@@ -461,6 +476,7 @@
         slug: slug,
         url: url,
         icon: String(elements.iconInput.value || '').trim(),
+        style: String(elements.styleInput.value || '').trim() || 'default',
         order: Number(elements.orderInput.value) || undefined,
         color: normalizeColor(elements.colorInput.value),
         enabled: !!elements.enabledInput.checked,

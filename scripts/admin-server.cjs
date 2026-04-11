@@ -90,7 +90,10 @@ async function readRequestJson(req) {
 }
 
 function dataFilePath(dataType) {
-  return path.join(__dirname, '..', BLOG_DATA_DIR, `${dataType}.json`);
+  if (path.isAbsolute(BLOG_DATA_DIR)) {
+    return path.join(BLOG_DATA_DIR, 'seed', `${dataType}.json`);
+  }
+  return path.join(__dirname, '..', BLOG_DATA_DIR, 'seed', `${dataType}.json`);
 }
 
 function getFallbackValue(dataType) {

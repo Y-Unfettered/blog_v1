@@ -19,7 +19,7 @@ services:
       - HOST=0.0.0.0
       - PORT=3030
       - NODE_ENV=production
-      - BLOG_DATA_DIR=/srv/blog-data/seed
+      - BLOG_DATA_DIR=/srv/blog-data
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}

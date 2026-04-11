@@ -16,8 +16,7 @@
     "admin:web": "node scripts/admin-server.cjs",
     "performance:monitor": "node scripts/performance-monitor.js",
     "setup:data": "node scripts/setup-data.cjs",
-    "reset:data": "node scripts/setup-data.cjs reset",
-    "backup:data": "node scripts/setup-data.cjs backup"
+    "reset:data": "node scripts/setup-data.cjs reset"
   },
   "dependencies": {
     "@iconify/vue": "^5.0.0",

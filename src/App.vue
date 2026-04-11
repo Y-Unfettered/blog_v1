@@ -12,7 +12,12 @@
     <div v-if="emailCopied" class="toast">邮箱已复制</div>
 
     <main class="max-w-7xl mx-auto px-4 py-8 min-h-[calc(100vh-144px)]">
-      <div v-if="loading" class="text-gray-400">加载中...</div>
+      <div v-if="loading" class="flex items-center justify-center min-h-[calc(100vh-144px)]">
+        <div class="flex flex-col items-center">
+          <div class="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <span class="text-gray-400">加载中...</span>
+        </div>
+      </div>
       <div v-else-if="error" class="text-red-400">{{ error }}</div>
 
       <div v-else>
@@ -582,8 +587,21 @@ watch(columnPageCount, (count) => {
   }
 }
 
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
 .fade-in {
